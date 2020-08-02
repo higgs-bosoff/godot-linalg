@@ -1,0 +1,410 @@
+[gd_scene load_steps=2 format=2]
+
+[sub_resource type="GDScript" id=1]
+script/source = "extends Control
+
+func get_v1():
+	var v1 = Expression.new()
+	v1.parse($Inputs/Vector1.text, [])
+	return v1.execute()
+
+func get_v2():
+	var v2 = Expression.new()
+	v2.parse($Inputs/Vector2.text, [])
+	return v2.execute()
+
+func get_M():
+	var M = Expression.new()
+	M.parse($Inputs/Matrix.text, [])
+	return M.execute()
+
+func _on_ButtonTestVector1_pressed():
+	var v1 = get_v1()
+	$TestVector1/Norm.text = str(LinAlg.norm_v(v1))
+
+
+func _on_ButtonTestVector2_pressed():
+	var v1 = get_v1()
+	var v2 = get_v2()
+	
+	$TestVector2/Ewise.text = str(LinAlg.ewise_vv_add(v1, v2))
+	$TestVector2/Dot.text = str(LinAlg.dot_vv(v1, v2))
+	$TestVector2/Dyadic.text = str(LinAlg.dyadic(v2))
+
+
+func _on_ButtonTestMatrix_pressed():
+	var v1 = get_v1()
+	var v2 = get_v2()
+	var M = get_M()
+	
+	$TestMatrix/Dot.text = str(LinAlg.dot_mv(M, v1))
+	$TestMatrix/Square.text = str(LinAlg.dot_mm(M, M))
+	var QR = LinAlg.qr(M)
+	$TestMatrix/Q.text = str(QR[0])
+	$TestMatrix/R.text = str(QR[1])
+	$TestMatrix/invQR.text = str(LinAlg.dot_mm(QR[0], QR[1]))
+	
+	var eig_pi = LinAlg.eigs_powerit(M.duplicate(true))
+	
+	$TestMatrix/EvalsPowIt.text = str(eig_pi[0])
+	$TestMatrix/EvecsPowIt.text = str(eig_pi[1])
+	$TestMatrix/EtestPowIt.text = \"\"
+	for i in range(len(M)):
+		var e1 = eig_pi[1][i]
+		$TestMatrix/EtestPowIt.text += str(LinAlg.dot_vv(e1, 
+														 LinAlg.dot_mv(M, e1)))
+		$TestMatrix/EtestPowIt.text += \", \"
+	
+"
+
+[node name="TestScene" type="Control"]
+script = SubResource( 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Inputs" type="Control" parent="."]
+margin_right = 40.0
+margin_bottom = 40.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="RichTextLabel" type="RichTextLabel" parent="Inputs"]
+margin_left = 24.0
+margin_top = 26.0
+margin_right = 294.0
+margin_bottom = 572.0
+text = "Insert here your vectors and matrices to conduct various tests. Write them as you would write arrays in GDScript, and they will be parsed accordingly. Take care of making them the right size."
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label" type="Label" parent="Inputs"]
+margin_left = 24.0
+margin_top = 126.0
+margin_right = 280.0
+margin_bottom = 156.0
+text = "Vector 1 (v1)"
+valign = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Vector1" type="TextEdit" parent="Inputs"]
+margin_left = 24.0
+margin_top = 156.0
+margin_right = 280.0
+margin_bottom = 191.0
+text = "[1,1,1]"
+wrap_enabled = true
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label2" type="Label" parent="Inputs"]
+margin_left = 24.0
+margin_top = 191.0
+margin_right = 280.0
+margin_bottom = 221.0
+text = "Vector 2 (v2)"
+valign = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Vector2" type="TextEdit" parent="Inputs"]
+margin_left = 24.0
+margin_top = 224.0
+margin_right = 280.0
+margin_bottom = 259.0
+text = "[1,2,3]"
+wrap_enabled = true
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label3" type="Label" parent="Inputs"]
+margin_left = 25.0
+margin_top = 289.0
+margin_right = 281.0
+margin_bottom = 319.0
+text = "Matrix (M)"
+valign = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Matrix" type="TextEdit" parent="Inputs"]
+margin_left = 25.0
+margin_top = 320.0
+margin_right = 281.0
+margin_bottom = 390.0
+text = "[[1,2,3],[2,1,4],[3,4,1]]"
+wrap_enabled = true
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="TestVector1" type="Control" parent="."]
+margin_right = 40.0
+margin_bottom = 40.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="ButtonTestVector1" type="Button" parent="TestVector1"]
+margin_left = 337.0
+margin_top = 26.0
+margin_right = 468.0
+margin_bottom = 72.0
+text = "Test vector 1"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label" type="Label" parent="TestVector1"]
+margin_left = 337.0
+margin_top = 93.0
+margin_right = 468.0
+margin_bottom = 126.0
+text = "Norm:"
+valign = 1
+
+[node name="Norm" type="Label" parent="TestVector1"]
+margin_left = 391.0
+margin_top = 93.0
+margin_right = 468.0
+margin_bottom = 126.0
+valign = 1
+
+[node name="TestVector2" type="Control" parent="."]
+margin_right = 40.0
+margin_bottom = 40.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="ButtonTestVector2" type="Button" parent="TestVector2"]
+margin_left = 337.0
+margin_top = 156.0
+margin_right = 468.0
+margin_bottom = 202.0
+text = "Test vector 2"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label" type="Label" parent="TestVector2"]
+margin_left = 337.0
+margin_top = 223.0
+margin_right = 468.0
+margin_bottom = 256.0
+text = "Element-wise (v1+v2):"
+valign = 1
+
+[node name="Ewise" type="Label" parent="TestVector2"]
+margin_left = 337.0
+margin_top = 259.0
+margin_right = 473.0
+margin_bottom = 289.0
+valign = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label2" type="Label" parent="TestVector2"]
+margin_left = 337.0
+margin_top = 319.0
+margin_right = 474.0
+margin_bottom = 352.0
+text = "Dot product (v1.v2):"
+valign = 1
+
+[node name="Dot" type="Label" parent="TestVector2"]
+margin_left = 337.0
+margin_top = 355.0
+margin_right = 473.0
+margin_bottom = 385.0
+valign = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label3" type="Label" parent="TestVector2"]
+margin_left = 337.0
+margin_top = 417.53
+margin_right = 474.0
+margin_bottom = 450.53
+text = "Dyadic matrix (v2 x v2):"
+valign = 1
+
+[node name="Dyadic" type="Label" parent="TestVector2"]
+margin_left = 337.0
+margin_top = 453.53
+margin_right = 473.0
+margin_bottom = 483.53
+valign = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="TestMatrix" type="Control" parent="."]
+margin_right = 40.0
+margin_bottom = 40.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="ButtonTestMatrix" type="Button" parent="TestMatrix"]
+margin_left = 541.544
+margin_top = 26.0
+margin_right = 672.544
+margin_bottom = 72.0
+text = "Test matrix"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label" type="Label" parent="TestMatrix"]
+margin_left = 541.544
+margin_top = 93.0
+margin_right = 672.544
+margin_bottom = 126.0
+text = "Dot product (M.v1):"
+valign = 1
+
+[node name="Dot" type="Label" parent="TestMatrix"]
+margin_left = 542.0
+margin_top = 126.0
+margin_right = 673.0
+margin_bottom = 159.0
+valign = 1
+
+[node name="Label2" type="Label" parent="TestMatrix"]
+margin_left = 542.0
+margin_top = 179.0
+margin_right = 673.0
+margin_bottom = 212.0
+text = "Square (M.M):"
+valign = 1
+
+[node name="Square" type="Label" parent="TestMatrix"]
+margin_left = 542.456
+margin_top = 212.0
+margin_right = 673.456
+margin_bottom = 245.0
+text = "
+"
+valign = 1
+
+[node name="Label3" type="Label" parent="TestMatrix"]
+margin_left = 542.456
+margin_top = 289.0
+margin_right = 673.456
+margin_bottom = 322.0
+text = "QR decomposition:"
+valign = 1
+
+[node name="Q" type="RichTextLabel" parent="TestMatrix"]
+margin_left = 543.0
+margin_top = 322.0
+margin_right = 788.0
+margin_bottom = 400.0
+text = "
+"
+fit_content_height = true
+
+[node name="R" type="RichTextLabel" parent="TestMatrix"]
+margin_left = 542.0
+margin_top = 418.0
+margin_right = 788.0
+margin_bottom = 503.0
+fit_content_height = true
+
+[node name="Label6" type="Label" parent="TestMatrix"]
+margin_left = 543.0
+margin_top = 503.0
+margin_right = 674.0
+margin_bottom = 536.0
+text = "Reconstructed:"
+valign = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="invQR" type="RichTextLabel" parent="TestMatrix"]
+margin_left = 542.0
+margin_top = 536.0
+margin_right = 788.0
+margin_bottom = 591.0
+fit_content_height = true
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label4" type="Label" parent="TestMatrix"]
+margin_left = 788.171
+margin_top = 26.0
+margin_right = 976.171
+margin_bottom = 59.0
+text = "Eigenvalues (power iteration):"
+valign = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="EvalsPowIt" type="RichTextLabel" parent="TestMatrix"]
+margin_left = 788.0
+margin_top = 72.0
+margin_right = 1011.0
+margin_bottom = 105.0
+fit_content_height = true
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label5" type="Label" parent="TestMatrix"]
+margin_left = 788.171
+margin_top = 126.0
+margin_right = 982.171
+margin_bottom = 159.0
+text = "Eigenvectors (power iteration):"
+valign = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="EvecsPowIt" type="RichTextLabel" parent="TestMatrix"]
+margin_left = 788.171
+margin_top = 179.0
+margin_right = 1011.17
+margin_bottom = 252.0
+fit_content_height = true
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label7" type="Label" parent="TestMatrix"]
+margin_left = 788.171
+margin_top = 289.0
+margin_right = 982.171
+margin_bottom = 322.0
+text = "Eigenvector test (e1.M.e1):"
+valign = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="EtestPowIt" type="Label" parent="TestMatrix"]
+margin_left = 788.0
+margin_top = 319.0
+margin_right = 982.0
+margin_bottom = 352.0
+valign = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+[connection signal="pressed" from="TestVector1/ButtonTestVector1" to="." method="_on_ButtonTestVector1_pressed"]
+[connection signal="pressed" from="TestVector2/ButtonTestVector2" to="." method="_on_ButtonTestVector2_pressed"]
+[connection signal="pressed" from="TestMatrix/ButtonTestMatrix" to="." method="_on_ButtonTestMatrix_pressed"]

@@ -27,6 +27,7 @@ static func init_v(n: int, v0: float=0.0)->Array:
 			
 	return ans
 
+
 # Initialise a matrix
 static func init_m(m: int, n: int, m0: float=0.0)->Array:
 	var ans = []
@@ -41,6 +42,7 @@ static func init_m(m: int, n: int, m0: float=0.0)->Array:
 	
 	return ans
 
+
 # Identity matrix
 static func eye(n: int)->Array:
 	var ans = []
@@ -54,6 +56,7 @@ static func eye(n: int)->Array:
 		ans[i] = row
 
 	return ans
+
 
 # Diagonal matrix
 static func diag(v: Array)->Array:
@@ -71,6 +74,7 @@ static func diag(v: Array)->Array:
 
 	return ans
 
+
 # Dyadic matrix
 static func dyadic(v: Array)->Array:
 	var n = len(v)
@@ -85,6 +89,7 @@ static func dyadic(v: Array)->Array:
 		ans[i] = row
 	
 	return ans
+
 
 # Transpose
 static func transpose(M: Array, in_place: bool=false)->Array:
@@ -104,6 +109,7 @@ static func transpose(M: Array, in_place: bool=false)->Array:
 	
 	return ans
 
+
 # Householder matrix from vector
 # (https://en.wikipedia.org/wiki/Householder_transformation)
 static func householder(v: Array)->Array:
@@ -121,7 +127,8 @@ static func householder(v: Array)->Array:
 		ans[i] = row
 	
 	return ans
-		
+
+
 # Random vector
 static func rand_v(n: int, s: float=1)->Array:
 	var ans = []
@@ -131,6 +138,7 @@ static func rand_v(n: int, s: float=1)->Array:
 		ans[i] = randf()*s
 	
 	return ans
+
 
 # Random matrix
 static func rand_m(m: int, n: int, s: float=1)->Array:
@@ -145,6 +153,7 @@ static func rand_m(m: int, n: int, s: float=1)->Array:
 		ans[i] = row
 	
 	return ans
+
 
 # Element-wise: vector plus scalar
 static func ewise_vs_add(v: Array, s: float, in_place: bool=false)->Array:
@@ -161,6 +170,7 @@ static func ewise_vs_add(v: Array, s: float, in_place: bool=false)->Array:
 	
 	return ans
 
+
 # Element-wise: vector times scalar
 static func ewise_vs_mul(v: Array, s: float, in_place: bool=false)->Array:
 	
@@ -175,7 +185,8 @@ static func ewise_vs_mul(v: Array, s: float, in_place: bool=false)->Array:
 		ans[i] = v[i]*s
 	
 	return ans
-	
+
+
 # Element-wise: vector plus vector
 static func ewise_vv_add(v: Array, v2: Array, in_place: bool=false)->Array:
 	
@@ -205,7 +216,8 @@ static func ewise_vv_mul(v: Array, v2: Array, in_place: bool=false)->Array:
 		ans[i] = v[i]*v2[i]
 	
 	return ans
-	
+
+
 # Element-wise: matrix plus scalar
 static func ewise_ms_add(M: Array, s: float, in_place: bool=false)->Array:
 	
@@ -225,6 +237,7 @@ static func ewise_ms_add(M: Array, s: float, in_place: bool=false)->Array:
 			
 	return ans
 
+
 # Element-wise: matrix times scalar
 static func ewise_ms_mul(M: Array, s: float, in_place: bool=false)->Array:
 	
@@ -243,7 +256,8 @@ static func ewise_ms_mul(M: Array, s: float, in_place: bool=false)->Array:
 			rowout[j] = rowin[j]*s	
 			
 	return ans
-	
+
+
 # Element-wise: matrix plus matrix
 static func ewise_mm_add(M: Array, M2: Array, in_place: bool=false)->Array:
 	
@@ -263,7 +277,8 @@ static func ewise_mm_add(M: Array, M2: Array, in_place: bool=false)->Array:
 			rowout[j] = row1[j]+row2[j]
 			
 	return ans
-	
+
+
 # Element-wise: matrix times matrix
 static func ewise_mm_mul(M: Array, M2: Array, in_place: bool=false)->Array:
 	
@@ -284,6 +299,7 @@ static func ewise_mm_mul(M: Array, M2: Array, in_place: bool=false)->Array:
 			
 	return ans
 
+
 # Norm^2 of vector
 static func norm2_v(v: Array)->float:
 	var ans = 0.0
@@ -293,14 +309,17 @@ static func norm2_v(v: Array)->float:
 	
 	return ans
 
+
 # Norm of vector
 static func norm_v(v: Array)->float:
 	return sqrt(norm2_v(v))
-	
+
+
 # Normalize
 static func normalized_v(v: Array, in_place: bool=false)->Array:
 	var norm = norm_v(v)
 	return ewise_vs_mul(v, 1.0/norm, in_place)
+
 
 # Dot product: matrix times vector
 static func dot_mv(M: Array, v: Array)->Array:
@@ -316,6 +335,7 @@ static func dot_mv(M: Array, v: Array)->Array:
 		ans[i] = tot
 		
 	return ans
+
 
 # Dot product: matrix times matrix
 static func dot_mm(M: Array, M2: Array)->Array:
@@ -335,6 +355,7 @@ static func dot_mm(M: Array, M2: Array)->Array:
 		
 	return ans
 
+
 # Dot product: vector times vector
 static func dot_vv(v: Array, v2: Array)->float:
 	var n = len(v)
@@ -344,6 +365,7 @@ static func dot_vv(v: Array, v2: Array)->float:
 		ans += v[i]*v2[i]
 	
 	return ans
+
 
 # Utilities for QR: Extract minor
 static func _minor(M: Array, d: int, ans: Array)->void:
@@ -358,13 +380,15 @@ static func _minor(M: Array, d: int, ans: Array)->void:
 			x = x if (i < d or j < d) else row[j]
 			rowout[j] = x
 
+
 # Utilities for QR: copy column
 static func _copycol(M: Array, v: Array, j: int)->void:
 	var m = len(M)
 	
 	for i in range(m):
 		v[i] = M[i][j]
-		
+
+
 # QR decomposition
 static func qr(M: Array)->Array:
 	var m = len(M) 
@@ -408,10 +432,13 @@ static func qr(M: Array)->Array:
 	transpose(Q, true)
 	
 	return [Q, R]
-	
+
+
 # Eigenvalues by power iteration for symmetric matrices
-static func eigs_powerit(M: Array, tol: float=1e-5)->Array:
+static func eigs_powerit(M: Array, tol: float=1e-5, in_place: bool=false)->Array:
 	var n = len(M)
+	if not in_place:
+		M = M.duplicate(true)
 	
 	var evals = []
 	var evecs = []
@@ -421,29 +448,35 @@ static func eigs_powerit(M: Array, tol: float=1e-5)->Array:
 	
 	for k in range(n):
 		# Start with a random vector
-		var v = rand_v(n)
+		var v0 = rand_v(n)
 		var e0 = 0
+		var v1
 		var e1
 		for t in range(100):
-			v = dot_mv(M, v)
-			e1 = norm_v(v)
-			ewise_vs_mul(v, 1.0/e1, true)
+			v1 = dot_mv(M, v0)
+			e1 = norm_v(v1)
+			ewise_vs_mul(v1, 1.0/e1, true)
 			if abs(e1-e0) < tol:
+				# Sign fix
+				e1 *= dot_vv(v0, v1)
 				break
 			e0 = e1
+			v0 = v1
 		evals[k] = e1
-		evecs[k] = v
+		evecs[k] = v0
 		
 		# Shift
 		for i in range(n):
 			var row = M[i]
-			var vi = v[i]
+			var vi = v0[i]
 			for j in range(n):
-				row[j] -= e1*vi*v[j]
+				row[j] -= e1*vi*v0[j]
 	
 	return [evals, evecs]
 
-# Eigenvalues by QR decomposition
+
+# Eigenvalues by QR decomposition (still in development, commented out for now)
+"""
 static func eigs_qr(M: Array, tol: float=1e-8)->Array:
 	var n = len(M)
 	
@@ -477,3 +510,4 @@ static func eigs_qr(M: Array, tol: float=1e-8)->Array:
 	transpose(evecs, true)
 		
 	return [evals, evecs]
+"""
