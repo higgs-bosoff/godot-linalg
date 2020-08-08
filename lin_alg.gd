@@ -188,7 +188,7 @@ static func ewise_vs_mul(v: Array, s: float, in_place: bool=false)->Array:
 
 # Element-wise: vector plus vector
 static func ewise_vv_add(v: Array, v2: Array, in_place: bool=false)->Array:
-	
+	# TODO make sure that either v1 or v2 are expanded based on the other's size
 	var n = len(v)
 	var ans
 	if in_place:
