@@ -19,6 +19,18 @@ void LinAlg::_register_methods() {
 	register_method("householder", &LinAlg::householder);
 	register_method("rand_v", &LinAlg::rand_v);
 	register_method("rand_m", &LinAlg::rand_m);
+	register_method("ewise_vs_add_in_place", &LinAlg::ewise_vs_add_in_place);
+	register_method("ewise_vs_add", &LinAlg::ewise_vs_add);
+	register_method("ewise_vs_mul_in_place", &LinAlg::ewise_vs_mul_in_place);
+	register_method("ewise_vs_mul", &LinAlg::ewise_vs_mul);
+	register_method("ewise_vv_add_in_place", &LinAlg::ewise_vv_add_in_place);
+	register_method("ewise_vv_add", &LinAlg::ewise_vv_add);
+	register_method("ewise_vv_mul_in_place", &LinAlg::ewise_vv_mul_in_place);
+	register_method("ewise_vv_mul", &LinAlg::ewise_vv_mul);
+	register_method("ewise_ms_add_in_place", &LinAlg::ewise_ms_add_in_place);
+	register_method("ewise_ms_add", &LinAlg::ewise_ms_add);
+	register_method("ewise_ms_mul_in_place", &LinAlg::ewise_ms_mul_in_place);
+	register_method("ewise_ms_mul", &LinAlg::ewise_ms_mul);
 }
 
 PoolRealArray LinAlg::init_v(int n, float v0 = real_t(0)) {
