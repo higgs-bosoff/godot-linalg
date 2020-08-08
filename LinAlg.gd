@@ -1,6 +1,5 @@
 class_name LinAlg
 
-# """
 # Linear Algebra library class
 
 # All methods are optimised for maximum speed. They take arrays and assume the 
@@ -15,7 +14,6 @@ class_name LinAlg
 # argument is provided, it is possible to perform the operation on the object
 # itself instead of instantiating a new one (this too optimises performance).
 
-# """
 
 # Initialise a vector
 static func init_v(n: int, v0: float=0.0)->Array:
