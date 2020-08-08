@@ -148,7 +148,7 @@ PoolRealArray LinAlg::rand_v(int n, real_t s = real_t(1)) {
 	ans.resize(n);
 	real_t *ans_write_ptr = ans.write().ptr();
 
-	RandomNumberGenerator *rand = RandomNumberGenerator::_new();
+	Ref<RandomNumberGenerator> rand = RandomNumberGenerator::_new();
 	for (int i = 0; i < n; ++i) {
 		ans_write_ptr[i] = fmod(rand->randf(), s);
 	}
