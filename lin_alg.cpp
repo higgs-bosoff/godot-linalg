@@ -188,15 +188,24 @@ PoolRealArray LinAlg::ewise_vs_mul(const PoolRealArray &v, real_t s) {
 	return ans;
 }
 
-inline void fit_size(PoolRealArray &v1, const PoolRealArray &v2) {
-	bool v1_lt_v2 = v1.size() < v2.size();
-	// resizes if v2 is longer
-	int new_size = v1_lt_v2 * v2.size() + !v1_lt_v2 * v1.size();
-	v1.resize(new_size);
+inline void stretch_to_fit(PoolRealArray &to_stretch, const PoolRealArray &to_fit) {
+	// For being absolutely branchless
+	//bool to_stretch_lt_to_fit = to_stretch.size() < to_fit.size();
+	// resizes if to_fit is longer
+	//int new_size = to_stretch_lt_to_fit * to_fit.size() + !to_stretch_lt_to_fit * to_stretch.size();
+	//to_stretch.resize(new_size);
+
+	// this ought to be easy to do (and is probably safer) with
+	if (to_stretch.size() < to_fit.size()) {
+		to_stretch.resize(to_fit.size());
+}
 }
 
+// It is up to the user to avoid costly stretching by supplying a longer v1
+// The implementation must promise that only the first argument is modified
+// Probably desirable if user expects to make this vector larger
 void LinAlg::ewise_vv_add_in_place(PoolRealArray &v1, const PoolRealArray &v2) {
-	fit_size(v1, v2);
+	stretch_to_fit(v1, v2);
 	real_t *v1_write_ptr = v1.write().ptr();
 	const real_t *v2_read_ptr = v2.read().ptr();
 
@@ -206,14 +215,24 @@ void LinAlg::ewise_vv_add_in_place(PoolRealArray &v1, const PoolRealArray &v2) {
 	}
 }
 
+// This needn't be the case if it's not in-place
 PoolRealArray LinAlg::ewise_vv_add(const PoolRealArray &v1, const PoolRealArray &v2) {
-	PoolRealArray ans(v1);
-	ewise_vv_add_in_place(ans, v2);
+	bool v1_gt_v2 = v1.size() > v2.size();
+	const PoolRealArray *small = !v1_gt_v2 ? &v1 : &v2;
+	const PoolRealArray *large = v1_gt_v2 ? &v1 : &v2;
+
+	PoolRealArray ans(*large);
+	ewise_vv_add_in_place(ans, *small);
 	return ans;
 }
 
+// Similarly,
+
+// It is up to the user to avoid costly stretching by supplying a longer v1
+// The implementation must promise that only the first argument is modified
+// Probably desirable if user expects to make this vector larger
 void LinAlg::ewise_vv_mul_in_place(PoolRealArray &v1, const PoolRealArray &v2) {
-	fit_size(v1, v2);
+	stretch_to_fit(v1, v2);
 	real_t *v1_write_ptr = v1.write().ptr();
 	const real_t *v2_read_ptr = v2.read().ptr();
 
@@ -223,9 +242,16 @@ void LinAlg::ewise_vv_mul_in_place(PoolRealArray &v1, const PoolRealArray &v2) {
 	}
 }
 
+// Again,
+
+// This needn't be the case if it's not in-place
 PoolRealArray LinAlg::ewise_vv_mul(const PoolRealArray &v1, const PoolRealArray &v2) {
-	PoolRealArray ans(v1);
-	ewise_vv_mul_in_place(ans, v2);
+	bool v1_gt_v2 = v1.size() > v2.size();
+	const PoolRealArray *small = !v1_gt_v2 ? &v1 : &v2;
+	const PoolRealArray *large = v1_gt_v2 ? &v1 : &v2;
+
+	PoolRealArray ans(*large);
+	ewise_vv_mul_in_place(ans, *small);
 	return ans;
 }
 
