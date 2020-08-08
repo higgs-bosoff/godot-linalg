@@ -57,6 +57,7 @@ static func eye(n: int)->Array:
 
 
 # Diagonal matrix
+# TODO consider making this sparse
 static func diag(v: Array)->Array:
 	var n = len(v)
 	var ans = []
