@@ -1,21 +1,21 @@
 class_name LinAlg
 
-"""
-Linear Algebra library class
+# """
+# Linear Algebra library class
 
-All methods are optimised for maximum speed. They take arrays and assume the 
-right dimension for them. If the inputs aren't right they'll crash. Third input
-is used for the answer, preallocated. There are no conditional branchings. 
-Just use the method appropriate to the situation. The names are coded to reflect
-that. s = scalar, v = vector and m = matrix. So for example
+# All methods are optimised for maximum speed. They take arrays and assume the 
+# right dimension for them. If the inputs aren't right they'll crash. Third input
+# is used for the answer, preallocated. There are no conditional branchings. 
+# Just use the method appropriate to the situation. The names are coded to reflect
+# that. s = scalar, v = vector and m = matrix. So for example
 
-dot_vm 
+# dot_vm 
 
-is a dot product between vector and matrix (in that order). Wherever the in_place
-argument is provided, it is possible to perform the operation on the object
-itself instead of instantiating a new one (this too optimises performance).
+# is a dot product between vector and matrix (in that order). Wherever the in_place
+# argument is provided, it is possible to perform the operation on the object
+# itself instead of instantiating a new one (this too optimises performance).
 
-"""
+# """
 
 # Initialise a vector
 static func init_v(n: int, v0: float=0.0)->Array:
@@ -476,38 +476,38 @@ static func eigs_powerit(M: Array, tol: float=1e-5, in_place: bool=false)->Array
 
 
 # Eigenvalues by QR decomposition (still in development, commented out for now)
-"""
-static func eigs_qr(M: Array, tol: float=1e-8)->Array:
-	var n = len(M)
+
+# static func eigs_qr(M: Array, tol: float=1e-8)->Array:
+# 	var n = len(M)
 	
-	var evals = []
-	var evecs = eye(n)
+# 	var evals = []
+# 	var evecs = eye(n)
 	
-	evals.resize(n)
+# 	evals.resize(n)
 	
-	var A = M.duplicate(true)
+# 	var A = M.duplicate(true)
 	
-	for t in range(100):
-		# Compute the Wilkinson shift
-		var a = A[n-2][n-2]
-		var b = A[n-1][n-2]
-		var c = A[n-1][n-1]
-		var del = (a-c)/2.0
-		var ws = c-(sign(del) if del != 0 else 1)*b*b/(abs(del)+sqrt(del*del+a*a))
-		for i in range(n):
-			A[i][i] -= ws
-		var QR = qr(A)
-		A = dot_mm(QR[1], QR[0])
-		for i in range(n):
-			A[i][i] += ws
-		evecs = dot_mm(evecs, QR[0])
-		if abs(A[n-1][n-2]) < tol:
-			break 
+# 	for t in range(100):
+# 		# Compute the Wilkinson shift
+# 		var a = A[n-2][n-2]
+# 		var b = A[n-1][n-2]
+# 		var c = A[n-1][n-1]
+# 		var del = (a-c)/2.0
+# 		var ws = c-(sign(del) if del != 0 else 1)*b*b/(abs(del)+sqrt(del*del+a*a))
+# 		for i in range(n):
+# 			A[i][i] -= ws
+# 		var QR = qr(A)
+# 		A = dot_mm(QR[1], QR[0])
+# 		for i in range(n):
+# 			A[i][i] += ws
+# 		evecs = dot_mm(evecs, QR[0])
+# 		if abs(A[n-1][n-2]) < tol:
+# 			break 
 	
-	for i in range(n):
-		evals[i] = A[i][i]
+# 	for i in range(n):
+# 		evals[i] = A[i][i]
 	
-	transpose(evecs, true)
+# 	transpose(evecs, true)
 		
-	return [evals, evecs]
-"""
+# 	return [evals, evecs]
+
