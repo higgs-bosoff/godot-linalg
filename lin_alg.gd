@@ -4,7 +4,7 @@ class_name LinAlg
 
 # All methods are optimised for maximum speed. They take arrays and assume the 
 # right dimension for them. If the inputs aren't right they'll crash. Third input
-# is used for the answer, preallocated. There are no conditional branchings. 
+# is used for the answer, preallocated. 
 # Just use the method appropriate to the situation. The names are coded to reflect
 # that. s = scalar, v = vector and m = matrix. So for example
 
