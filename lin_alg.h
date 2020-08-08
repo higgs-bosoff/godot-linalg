@@ -1,8 +1,6 @@
 #ifndef LIN_ALG_H
 #define LIN_ALG_H
 
-#include <cstring>
-#include <utility>
 
 #include <Godot.hpp>
 #include <Reference.hpp>
@@ -27,96 +25,90 @@ struct LinAlg : public Reference {
     static void _register_methods();
 
     /// Inititalise a vector
-    static PoolRealArray init_v(int n, float v0) {
-        PoolRealArray ans;
-        ans.resize(n);
-        real_t *ans_write_ptr = ans.write().ptr();
-        std::memset(ans_write_ptr, v0, (n * sizeof(real_t)));
-        // for (int i = 0; i < n; ++i) {
-        //     ans_write_ptr[i] = v0;
-        // }
-
-        return ans;
-    }
+    static PoolRealArray init_v(int n, real_t v0 = real_t(0));
 
     /// Initialise a matrix
-    static PoolRealArray init_m(int m, int n, float m0) {
-        PoolRealArray ans;
-        ans.resize(m * n);
-        real_t *ans_write_ptr = ans.write().ptr();
-
-        // Initialise as contiguous space
-        std::memset(ans_write_ptr, m0, (m * n * sizeof(real_t)));
-        // for (int i = 0; i < m * n; ++i) {
-        //     ans_write_ptr[i] = m0;
-        // }
-
-        return ans;
-    }
+    static PoolRealArray init_m(int m, int n, real_t m0 = real_t(0));
 
     /// Identity matrix
-    static PoolRealArray eye(const int n) {
-        PoolRealArray ans;
-        ans.resize(n * n);
-        real_t *ans_write_ptr = ans.write().ptr();
-
-        // Use row-major notation for accessing index
-        for (int i = 0; i < n; ++i) {
-            for (int j = 0; j < n; ++j) {
-                // look ma, no branches
-                ans_write_ptr[n * i + j] = real_t(i == j);
-            }
-        }
-
-        return ans;
-    }
+    static PoolRealArray eye(const int n);
 
     /// Diagonal matrix
     /// TODO consider making this sparse
-    static PoolRealArray diag(const PoolRealArray &v) {
-        int n = v.size();
-        PoolRealArray ans;
-        ans.resize(n * n);
-        real_t *ans_write_ptr = ans.write().ptr();
-
-        const real_t *v_read_ptr = v.read().ptr();
-        for (int i = 0; i < n; ++i) {
-            // can't use v[i] as that operator expects a const int
-            real_t vi = v_read_ptr[i];
-            for (int j = 0; j < n; ++j) {
-                ans_write_ptr[n * i + j] = real_t((i == j) * vi);
-            }
-        }
-
-        return ans;
-    }
+    static PoolRealArray diag(const PoolRealArray &v);
 
     /// Dyadic matrix
-    static PoolRealArray dyadic(const PoolRealArray &v) {
-        int n = v.size();
-        PoolRealArray ans;
-        ans.resize(n * n);
-        real_t *ans_write_ptr = ans.write().ptr();
+    static PoolRealArray dyadic(const PoolRealArray &v);
 
-        const real_t *v_read_ptr = v.read().ptr();
-        for (int i = 0; i < n; ++i) {
-            real_t vi = v_read_ptr[i];
-            PoolRealArray row(v);
-            real_t *row_write_ptr = row.write().ptr();
-            for (int j = 0; j < n; ++j) {
-                // can't use v[i] as that operator doesn't return a reference
-                row_write_ptr[j] *= vi;
-            }
-            ans_write_ptr[n * i] = row_write_ptr[i];
-        }
+    /// Transpose in-place, needs matrix row size
+    static void transpose_in_place(PoolRealArray &M, int n);
 
-        return ans;
-    }
+    /// Transpose, needs matrix row size
+    static PoolRealArray transpose(const PoolRealArray & M, int n);
 
-    /// Transpose in-place
-    static void transpose(const PoolRealArray &M, int n) {
+    /// Householder matrix from vector
+    /// (https://en.wikipedia.org/wiki/Householder_transformation)
+    static PoolRealArray householder(const PoolRealArray &v);
 
-    }
+    /// Random vector
+    static PoolRealArray rand_v(int n, real_t s = real_t(1));
+
+    /// Random matrix
+    static PoolRealArray rand_m(int m, int n, real_t s = real_t(1));
+
+    /// Element-wise: vector plus scalar in-place
+    static void ewise_vs_add_in_place(PoolRealArray &v, real_t s);
+
+    /// Element-wise: vector plus scalar
+    static PoolRealArray ewise_vs_add(const PoolRealArray &v, real_t s);
+
+    /// Element-wise: vector times scalar in-place
+    static void ewise_vs_mul_in_place(PoolRealArray &v, real_t s);
+
+    /// Element-wise: vector times scalar
+    static PoolRealArray ewise_vs_mul(const PoolRealArray &v, real_t s);
+
+    /// Element-wise: vector plus vector in-place
+    static void ewise_vv_add_in_place(PoolRealArray &v1, const PoolRealArray &v2);
+
+    /// Element-wise: vector plus vector
+    static PoolRealArray ewise_vv_add(const PoolRealArray &v1, const PoolRealArray &v2);
+
+    /// Element-wise: vector times vector in-place
+    static void ewise_vv_mul_in_place(PoolRealArray &v1, const PoolRealArray &v2);
+
+    /// Element-wise: vector times vector
+    static PoolRealArray ewise_vv_mul(const PoolRealArray &v1, const PoolRealArray &v2);
+
+    /// Element-wise: matrix plus scalar in-place
+    static void ewise_ms_add_in_place(PoolRealArray &M, real_t s);
+
+    /// Element-wise: matrix plus scalar
+    static PoolRealArray ewise_ms_add(const PoolRealArray &M, real_t s);
+
+    /// Element-wise: matrix times scalar in-place
+    static void ewise_ms_mul_in_place(PoolRealArray &M, real_t s);
+
+    /// Element-wise: matrix times scalar
+    static PoolRealArray ewise_ms_mul(const PoolRealArray &M, real_t s);
+
+    // /// Element-wise: matrix plus matrix in-place
+    // static void ewise_mm_add_in_place(PoolRealArray &M1, const PoolRealArray &M2);
+
+    // /// Element-wise: matrix plus matrix
+    // static PoolRealArray ewise_mm_add(const PoolRealArray &M1, const PoolRealArray &M2);
+
+    // /// Element-wise: matrix times matrix in-place
+    // static void ewise_mm_mul_in_place(PoolRealArray &M1, const PoolRealArray &M2);
+
+    // /// Element-wise: matrix times matrix
+    // static PoolRealArray ewise_mm_mul(const PoolRealArray &M1, const PoolRealArray &M2);
+
+    // /// Norm^2 of vector
+    // static real_t norm2_v(const PoolRealArray &v);
+
+    // /// Norm of vector
+    // static real_t norm_v(const PoolRealArray &v);
 };
 
 #endif
