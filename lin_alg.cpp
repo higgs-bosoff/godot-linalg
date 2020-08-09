@@ -48,16 +48,20 @@ void LinAlg::_register_methods() {
 
 const char *not_m_msg = "This Dictionary isn't a matrix. Make sure that there are 3 values of type PoolRealArray, float, float.";
 
-#define M_CHECK(M)             \
-	if (check && !is_m((M))) { \
-		ERR_PRINT(not_m_msg);  \
-		ERR_FAIL();            \
+#define M_CHECK(M)                \
+	if (check) {                  \
+		if (!is_m((M))) {         \
+			ERR_PRINT(not_m_msg); \
+			ERR_FAIL();           \
+		}                         \
 	}
 
-#define M_CHECK_V(M, ret)      \
-	if (check && !is_m((M))) { \
-		ERR_PRINT(not_m_msg);  \
-		ERR_FAIL_V((ret));     \
+#define M_CHECK_V(M, ret)         \
+	if (check) {                  \
+		if (!is_m((M))) {         \
+			ERR_PRINT(not_m_msg); \
+			ERR_FAIL_V((ret));    \
+		}                         \
 	}
 
 inline bool is_m(const Dictionary &M) {
@@ -65,11 +69,17 @@ inline bool is_m(const Dictionary &M) {
 		return false;
 	}
 	const Array M_values = M.values();
-	bool type_0_ok = M_values[0].get_type() == Variant::POOL_REAL_ARRAY;
-	bool type_1_ok = M_values[1].get_type() == Variant::REAL;
-	bool type_2_ok = M_values[2].get_type() == Variant::REAL;
-	bool indexes_ok = (0 < (int)M_values[1]) && (0 < (int)M_values[2]);
-	return type_0_ok && type_1_ok && type_2_ok && indexes_ok;
+	if (M_values[0].get_type() != Variant::POOL_REAL_ARRAY) {
+		return false;
+	} else if (M_values[1].get_type() != Variant::REAL) {
+		return false;
+	} else if (M_values[2].get_type() != Variant::REAL) {
+		return false;
+	} else if (((int)M_values[1] < 0) || ((int)M_values[2] < 0)) {
+		return false;
+	} else {
+		return true;
+	}
 }
 
 inline Dictionary make_m(const PoolRealArray &M, int m, int n) {
@@ -80,10 +90,11 @@ inline Dictionary make_m() {
 	return ::make_m(PoolRealArray(), 0, 0);
 }
 
-constexpr real_t real_nan = std::numeric_limits<real_t>::signaling_NaN();
+constexpr real_t real_signaling_nan = std::numeric_limits<real_t>::signaling_NaN();
 
 inline real_t &LinAlg::m_ij(const Dictionary &M, int i, int j, bool check = true, bool column_major = false) {
-	M_CHECK_V(M, const_cast<real_t &>(real_nan));
+	M_CHECK_V(M, const_cast<real_t &>(real_signaling_nan));
+
 	const Array M_values = M.values();
 	PoolRealArray *_M = &((PoolRealArray)M_values[0]);
 	real_t *M_write_ptr = _M->write().ptr();
@@ -112,7 +123,7 @@ Dictionary LinAlg::init_m(int m, int n, real_t m0 = real_t()) {
 	return ::make_m(::init_v(m * n), m, n);
 }
 
-Dictionary LinAlg::eye(const int n) {
+Dictionary LinAlg::eye(int n) {
 	PoolRealArray ans;
 	ans.resize(n * n);
 	real_t *ans_write_ptr = ans.write().ptr();
@@ -203,12 +214,14 @@ inline void transpose_in_place(PoolRealArray &M, int m, int n) {
 
 void LinAlg::transpose_in_place(Dictionary &M, bool check = true) {
 	M_CHECK(M);
+
 	const Array M_values = M.values();
 	::transpose_in_place((PoolRealArray)M_values[0], M_values[1], M_values[2]);
 }
 
 Dictionary LinAlg::transpose(const Dictionary &M, bool check = true) {
 	M_CHECK_V(M, Dictionary());
+
 	const Array M_values = M.values();
 	PoolRealArray ans((PoolRealArray)M_values[0]);
 	::transpose_in_place(ans, M_values[1], M_values[2]);
@@ -234,7 +247,7 @@ Dictionary LinAlg::householder(const PoolRealArray &v) {
 		ans_write_ptr[n * i] = row_write_ptr[i];
 	}
 
-	return make_m(ans, n, n);
+	return ::make_m(ans, n, n);
 }
 
 PoolRealArray LinAlg::rand_v(int n, real_t s = real_t(1)) {
@@ -254,129 +267,89 @@ Dictionary LinAlg::rand_m(int m, int n, real_t s = real_t(1)) {
 	return ::make_m(rand_v(m * n, s), m, n);
 }
 
-void LinAlg::ewise_vs_add_in_place(PoolRealArray &v, real_t s) {
-	real_t *v_write_ptr = v.write().ptr();
-
-	for (int i = 0; i < v.size(); ++i) {
-		v_write_ptr[i] += s;
+#define ewise_vs_op_in_place(op, __)                                    \
+	void LinAlg::ewise_vs_##op##_in_place(PoolRealArray &v, real_t s) { \
+		real_t *v_write_ptr = v.write().ptr();                          \
+                                                                        \
+		for (int i = 0; i < v.size(); ++i) {                            \
+			v_write_ptr[i] __ s;                                        \
+		}                                                               \
 	}
-}
 
-PoolRealArray LinAlg::ewise_vs_add(const PoolRealArray &v, real_t s) {
-	PoolRealArray ans(v);
-	ewise_vs_add_in_place(ans, s);
-	return ans;
-}
-
-void LinAlg::ewise_vs_mul_in_place(PoolRealArray &v, real_t s) {
-	real_t *v_write_ptr = v.write().ptr();
-
-	for (int i = 0; i < v.size(); ++i) {
-		v_write_ptr[i] *= s;
+#define ewise_vs_op(op)                                                       \
+	PoolRealArray LinAlg::ewise_vs_##op##(const PoolRealArray &v, real_t s) { \
+		PoolRealArray ans(v);                                                 \
+		ewise_vs_##op##_in_place(ans, s);                                     \
+		return ans;                                                           \
 	}
-}
 
-PoolRealArray LinAlg::ewise_vs_mul(const PoolRealArray &v, real_t s) {
-	PoolRealArray ans(v);
-	ewise_vs_mul_in_place(ans, s);
-	return ans;
-}
+ewise_vs_op_in_place(add, +=);
+ewise_vs_op_in_place(mul, *=);
+
+ewise_vs_op(add);
+ewise_vs_op(mul);
 
 inline void stretch_to_fit_v(PoolRealArray &to_stretch, const PoolRealArray &to_fit) {
-	// For being absolutely branchless
-	//bool to_stretch_lt_to_fit = to_stretch.size() < to_fit.size();
-	// resizes if to_fit is longer
-	//int new_size = to_stretch_lt_to_fit * to_fit.size() + !to_stretch_lt_to_fit * to_stretch.size();
-	//to_stretch.resize(new_size);
-
-	// this ought to be easy to do (and is probably safer) with
 	if (to_stretch.size() < to_fit.size()) {
 		to_stretch.resize(to_fit.size());
 	}
 }
 
-// It is up to the user to avoid costly stretching by supplying a longer v1
-// The implementation must promise that only the first argument is modified
-// Probably desirable if user expects to make this vector larger
-void LinAlg::ewise_vv_add_in_place(PoolRealArray &v1, const PoolRealArray &v2) {
-	::stretch_to_fit_v(v1, v2);
-	real_t *v1_write_ptr = v1.write().ptr();
-	const real_t *v2_read_ptr = v2.read().ptr();
-
-	// add all elements based on v2's length
-	for (int i = 0; i < v2.size(); ++i) {
-		v1_write_ptr[i] += v2_read_ptr[i];
+// It is up to the user to avoid costly stretching by supplying a longer v1.
+// The implementation must promise that only the first argument is modified.
+// This is desirable if the user wants to make this vector larger.
+#define ewise_vv_op_in_place(op, __)                                                    \
+	void LinAlg::ewise_vv_##op##_in_place(PoolRealArray &v1, const PoolRealArray &v2) { \
+		::stretch_to_fit_v(v1, v2);                                                     \
+		real_t *v1_write_ptr = v1.write().ptr();                                        \
+		const real_t *v2_read_ptr = v2.read().ptr();                                    \
+		/* ##op## all elements based on v2's length */                                  \
+		for (int i = 0; i < v2.size(); ++i) {                                           \
+			v1_write_ptr[i] __ v2_read_ptr[i];                                          \
+		}                                                                               \
 	}
-}
 
 // This needn't be the case if it's not in-place
-PoolRealArray LinAlg::ewise_vv_add(const PoolRealArray &v1, const PoolRealArray &v2) {
-	bool v1_gt_v2 = v1.size() > v2.size();
-	const PoolRealArray *small = !v1_gt_v2 ? &v1 : &v2;
-	const PoolRealArray *large = v1_gt_v2 ? &v1 : &v2;
-
-	PoolRealArray ans(*large);
-	ewise_vv_add_in_place(ans, *small);
-	return ans;
-}
-
-// Similarly,
-
-// It is up to the user to avoid costly stretching by supplying a longer v1
-// The implementation must promise that only the first argument is modified
-// Probably desirable if user expects to make this vector larger
-void LinAlg::ewise_vv_mul_in_place(PoolRealArray &v1, const PoolRealArray &v2) {
-	::stretch_to_fit_v(v1, v2);
-	real_t *v1_write_ptr = v1.write().ptr();
-	const real_t *v2_read_ptr = v2.read().ptr();
-
-	// mul all elements based on v2's length
-	for (int i = 0; i < v2.size(); ++i) {
-		v1_write_ptr[i] *= v2_read_ptr[i];
+#define compare_vv_and_ewise_vv_op(op)                                                      \
+	PoolRealArray LinAlg::ewise_vv_##op(const PoolRealArray &v1, const PoolRealArray &v2) { \
+		bool v1_gt_v2 = v1.size() > v2.size();                                              \
+		const PoolRealArray *small = !v1_gt_v2 ? &v1 : &v2;                                 \
+		const PoolRealArray *large = v1_gt_v2 ? &v1 : &v2;                                  \
+                                                                                            \
+		PoolRealArray ans(*large);                                                          \
+		ewise_vv_##op##_in_place(ans, *small);                                              \
+		return ans;                                                                         \
 	}
-}
 
-// Again,
+ewise_vv_op_in_place(add, +=);
+ewise_vv_op_in_place(mul, *=);
 
-// This needn't be the case if it's not in-place
-PoolRealArray LinAlg::ewise_vv_mul(const PoolRealArray &v1, const PoolRealArray &v2) {
-	bool v1_gt_v2 = v1.size() > v2.size();
-	const PoolRealArray *small = !v1_gt_v2 ? &v1 : &v2;
-	const PoolRealArray *large = v1_gt_v2 ? &v1 : &v2;
-
-	PoolRealArray ans(*large);
-	ewise_vv_mul_in_place(ans, *small);
-	return ans;
-}
+compare_vv_and_ewise_vv_op(add);
+compare_vv_and_ewise_vv_op(mul);
 
 // internals are alike, just reuse the functions
 
-void LinAlg::ewise_ms_add_in_place(Dictionary &M, real_t s, bool check = true) {
-	M_CHECK(M);
-	ewise_vs_add_in_place((PoolRealArray)M.values()[0], s);
-}
+#define ewise_ms_op_in_place(op)                                                        \
+	void LinAlg::ewise_ms_##op##_in_place(Dictionary &M, real_t s, bool check = true) { \
+		M_CHECK(M);                                                                     \
+		ewise_vs_##op##_in_place((PoolRealArray)M.values()[0], s);                      \
+	}
 
-Dictionary LinAlg::ewise_ms_add(const Dictionary &M, real_t s, bool check = true) {
-	M_CHECK(M, ::make_m());
-	const Array M_values = M.values();
-	PoolRealArray ans((PoolRealArray)M_values[0]);
-	ewise_vs_add_in_place(ans, s);
-	return ::make_m(ans, M_values[1], M_values[2]);
-}
+#define ewise_ms_op(op)                                                                  \
+	Dictionary LinAlg::ewise_ms_##op(const Dictionary &M, real_t s, bool check = true) { \
+		M_CHECK_V(M, ::make_m());                                                        \
+                                                                                         \
+		const Array M_values = M.values();                                               \
+		PoolRealArray ans((PoolRealArray)M_values[0]);                                   \
+		ewise_vs_##op##_in_place(ans, s);                                                \
+		return ::make_m(ans, M_values[1], M_values[2]);                                  \
+	}
 
-void LinAlg::ewise_ms_mul_in_place(Dictionary &M, real_t s, bool check = true) {
-	M_CHECK(M);
-	ewise_vs_mul_in_place((PoolRealArray)M.values()[0], s);
-}
+ewise_ms_op_in_place(add);
+ewise_ms_op_in_place(mul);
 
-Dictionary LinAlg::ewise_ms_mul(const Dictionary &M, real_t s, bool check = true) {
-	M_CHECK_V(M, ::make_m());
-
-	const Array M_values = M.values();
-	PoolRealArray ans((PoolRealArray)M_values[0]);
-	ewise_vs_mul_in_place(ans, s);
-	return ::make_m(ans, M_values[1], M_values[2]);
-}
+ewise_ms_op(add);
+ewise_ms_op(mul);
 
 /*
 stretch to fit 2d
@@ -428,85 +401,64 @@ inline void stretch_to_fit_m(PoolRealArray &to_stretch, int m1, int n1, const Po
 	// stretch columns
 	if (m1 < m2) {
 		// [1 2 3;4 5 6] -> [1 4;2 5;3 6]
-		::transpose_in_place(to_stretch, n2);
+		::transpose_in_place(to_stretch, m1, n2);
 		// [1 4;2 5;3 6] -> [1 4;2 5;3 6;0 0]
 		// to_stretch.resize(to_fit.size());
 		to_stretch.append_array(init_v(n2 * (m2 - m1)));
 		// [1 4;2 5;3 6;0 0] -> [1 2 3 0;4 5 6 0]
-		::transpose_in_place(to_stretch, m2);
+		::transpose_in_place(to_stretch, n2, m2);
 	}
 }
 
-void LinAlg::ewise_mm_add_in_place(Dictionary &M1, const Dictionary &M2, bool check = true) {
-	M_CHECK(M1);
-	M_CHECK(M2);
-
-	const Array M1_values = M1.values();
-	const Array M2_values = M2.values();
-	PoolRealArray *_M1 = &(PoolRealArray)M1_values[0];
-	PoolRealArray *_M2 = &(PoolRealArray)M2_values[0];
-	::stretch_to_fit_m(
-			*_M1, M1_values[1], M1_values[2],
-			*_M2, M2_values[1], M2_values[2]);
-	real_t *M1_write_ptr = _M1->write().ptr();
-	const real_t *M2_read_ptr = _M2->read().ptr();
-
-	// add all elements based on M2's length
-	for (int i = 0; i < M2.size(); ++i) {
-		M1_write_ptr[i] += M2_read_ptr[i];
+// It is up to the user to avoid costly stretching by supplying a longer v1.
+// The implementation must promise that only the first argument is modified.
+// This is desirable if the user wants to make this vector larger.
+// This is even more significant due to the added complexity of resizing a matrix.
+#define ewise_mm_op_in_place(op, __)                                                                 \
+	void LinAlg::ewise_mm_##op##_in_place(Dictionary &M1, const Dictionary &M2, bool check = true) { \
+		M_CHECK(M1);                                                                                 \
+		M_CHECK(M2);                                                                                 \
+                                                                                                     \
+		const Array M1_values = M1.values();                                                         \
+		const Array M2_values = M2.values();                                                         \
+		PoolRealArray *_M1 = &(PoolRealArray)M1_values[0];                                           \
+		PoolRealArray *_M2 = &(PoolRealArray)M2_values[0];                                           \
+                                                                                                     \
+		::stretch_to_fit_m(                                                                          \
+				*_M1, M1_values[1], M1_values[2],                                                    \
+				*_M2, M2_values[1], M2_values[2]);                                                   \
+                                                                                                     \
+		real_t *M1_write_ptr = _M1->write().ptr();                                                   \
+		const real_t *M2_read_ptr = _M2->read().ptr();                                               \
+		/* ##op## all elements based on M2's length */                                               \
+		for (int i = 0; i < _M2->size(); ++i) {                                                      \
+			M1_write_ptr[i] __ M2_read_ptr[i];                                                       \
+		}                                                                                            \
 	}
-}
 
-Dictionary LinAlg::ewise_mm_add(const Dictionary &M1, const Dictionary &M2, bool check = true) {
-	M_CHECK(M1);
-	M_CHECK(M2);
-
-	const Array M1_values = M1.values();
-	const Array M2_values = M2.values();
-	PoolRealArray *_M1 = &(PoolRealArray)M1_values[0];
-	PoolRealArray *_M2 = &(PoolRealArray)M2_values[0];
-	int m1 = M1_values[1];
-	int m2 = M2_values[1];
-	int n1 = M1_values[2];
-	int n2 = M2_values[2];
-
-	bool n1_gt_n2 = n1 > n2;
-	int small_n = !n1_gt_n2 ? n1 : n2;
-	int large_n = n1_gt_n2 ? n1 : n2;
-
-	bool M1_gt_M2 = _M1->size() > _M2->size();
-	const Dictionary *small = !M1_gt_M2 ? &M1 : &M2;
-	const Dictionary *large = M1_gt_M2 ? &M1 : &M2;
-
-	Dictionary ans(*large);
-	ewise_mm_add_in_place(ans, *small);
-	return ans;
-}
-
-void LinAlg::ewise_mm_mul_in_place(PoolRealArray &M1, int n1, const PoolRealArray &M2, int n2) {
-	::stretch_to_fit_m(M1, n1, M2, n2);
-	real_t *M1_write_ptr = M1.write().ptr();
-	const real_t *M2_read_ptr = M2.read().ptr();
-
-	// mul all elements based on M2's length
-	for (int i = 0; i < M2.size(); ++i) {
-		M1_write_ptr[i] *= M2_read_ptr[i];
+#define compare_mm_and_ewise_mm_op(op)                                                                  \
+	Dictionary LinAlg::ewise_mm_##op##(const Dictionary &M1, const Dictionary &M2, bool check = true) { \
+		M_CHECK_V(M1, ::make_m());                                                                      \
+		M_CHECK_V(M2, ::make_m());                                                                      \
+                                                                                                        \
+		PoolRealArray *_M1 = &(PoolRealArray)M1.values()[0];                                            \
+		PoolRealArray *_M2 = &(PoolRealArray)M2.values()[0];                                            \
+                                                                                                        \
+		bool M1_gt_M2 = _M1->size() > _M2->size();                                                      \
+		const Dictionary *small = !M1_gt_M2 ? &M1 : &M2;                                                \
+		const Dictionary *large = M1_gt_M2 ? &M1 : &M2;                                                 \
+                                                                                                        \
+		Dictionary ans(*large);                                                                         \
+		ewise_mm_##op##_in_place(ans, *small);                                                          \
+		return ans;                                                                                     \
 	}
-}
 
-PoolRealArray LinAlg::ewise_mm_mul(const PoolRealArray &M1, int n1, const PoolRealArray &M2, int n2) {
-	bool n1_gt_n2 = n1 > n2;
-	int small_n = !n1_gt_n2 ? n1 : n2;
-	int large_n = n1_gt_n2 ? n1 : n2;
+// This consideration can be overlooked by making sure that the larger matrix becomes the first arg.
+ewise_mm_op_in_place(add, +=);
+ewise_mm_op_in_place(mul, *=);
 
-	bool M1_gt_M2 = M1.size() > M2.size();
-	const PoolRealArray *small = !M1_gt_M2 ? &M1 : &M2;
-	const PoolRealArray *large = M1_gt_M2 ? &M1 : &M2;
-
-	PoolRealArray ans(*large);
-	ewise_mm_mul_in_place(ans, large_n, *small, small_n);
-	return ans;
-}
+compare_mm_and_ewise_mm_op(add);
+compare_mm_and_ewise_mm_op(mul);
 
 real_t LinAlg::norm2_v(const PoolRealArray &v) {
 	real_t ans = real_t(0);

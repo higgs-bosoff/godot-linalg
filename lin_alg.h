@@ -33,7 +33,7 @@ struct LinAlg : public Reference {
 	static Dictionary init_m(int m, int n, real_t m0 = real_t(0));
 
 	/// Identity matrix
-	static Dictionary eye(const int n);
+	static Dictionary eye(int n);
 
 	/// Diagonal matrix
 	/// TODO consider making this sparse
