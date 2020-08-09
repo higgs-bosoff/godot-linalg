@@ -104,7 +104,7 @@ inline real_t &LinAlg::m_ij(const Dictionary &M, int i, int j, bool column_major
 	return column_major ? M_write_ptr[m * j + i] : M_write_ptr[n * i + j];
 }
 
-inline PoolRealArray init_v(int n, real_t v0 = real_t(0)) {
+inline PoolRealArray _init_v(int n, real_t v0 = real_t(0)) {
 	PoolRealArray ans;
 	ans.resize(n);
 	real_t *ans_write_ptr = ans.write().ptr();
@@ -116,12 +116,16 @@ inline PoolRealArray init_v(int n, real_t v0 = real_t(0)) {
 	return ans;
 }
 
+inline PoolRealArray _init_m(int m, int n, real_t m0 = real_t(0)) {
+	return _init_v(m * n, m0);
+}
+
 PoolRealArray LinAlg::init_v(int n, real_t v0 = real_t()) {
-	return ::init_v(n, v0);
+	return ::_init_v(n, v0);
 }
 
 Dictionary LinAlg::init_m(int m, int n, real_t m0 = real_t()) {
-	return ::_make_m(::init_v(m * n), m, n);
+	return ::_make_m(::_init_m(m, n, m0), m, n);
 }
 
 Dictionary LinAlg::eye(int n) {
@@ -396,7 +400,7 @@ inline void _stretch_to_fit_m(PoolRealArray &to_stretch, int m1, int n1, const P
 	if (n1 < n2 /* && m1 == m2*/) {
 		// [1 2 3;4 5 6] -> [1 2 3;4 5 6;0 0 0]
 		// to_stretch.resize(to_fit.size());
-		to_stretch.append_array(init_v(m2 * (n2 - n1)));
+		to_stretch.append_array(_init_v(m2 * (n2 - n1)));
 	}
 
 	// stretch columns
@@ -405,7 +409,7 @@ inline void _stretch_to_fit_m(PoolRealArray &to_stretch, int m1, int n1, const P
 		::transpose_in_place(to_stretch, m1, n2);
 		// [1 4;2 5;3 6] -> [1 4;2 5;3 6;0 0]
 		// to_stretch.resize(to_fit.size());
-		to_stretch.append_array(init_v(n2 * (m2 - m1)));
+		to_stretch.append_array(_init_v(n2 * (m2 - m1)));
 		// [1 4;2 5;3 6;0 0] -> [1 2 3 0;4 5 6 0]
 		::transpose_in_place(to_stretch, n2, m2);
 	}
@@ -511,7 +515,7 @@ PoolRealArray _dot_mm(const PoolRealArray &M1, int m1, int n1, const PoolRealArr
 	}
 
 	// TODO check if this hack really avoids copy-on-write
-	PoolRealArray *ans = &init_v(m1 * n2);
+	PoolRealArray *ans = &_init_v(m1 * n2);
 	real_t *ans_write_ptr = ans->write().ptr();
 	const real_t *M1_read_ptr = M1.read().ptr();
 	const real_t *M2_read_ptr = M2.read().ptr();
