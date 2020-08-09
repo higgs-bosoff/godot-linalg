@@ -8,16 +8,18 @@
 
 using namespace godot;
 
-/// All methods are optimised for maximum speed. They take arrays or dictionaries.There are no conditional branchings.
-/// The names are coded to reflect that. s = scalar, v = vector and m = matrix. So for example
+/// All methods exchange PoolRealArrays or Dictionaries.
+/// Conditional branches are avoided where possible.
+/// The names are coded to reflect the type of data used: s = scalar, v = vector and m = matrix. So
 ///
-/// dot_vm
+/// dot_mv
 ///
-/// is a dot product between vector and matrix (in that order). Wherever the in_place
-/// argument is provided, it is possible to perform the operation on the object
-/// itself instead of instantiating a new one (this too optimises performance).
+/// is a dot product between matrix and vector (in that order).
+/// In-place function variants do not instantiate new PoolRealArrays (but may resize them).
 ///
-/// Matrices are represented as a Dictionary with keys "M", "m", and "n".
+/// Matrices are represented as Dictionaries of PoolRealArray, real_t, real_t.
+///
+/// This is *NOT* a replacement for proper BLAS libraries and routines.
 struct LinAlg : public Reference {
 	GODOT_CLASS(LinAlg, Reference);
 

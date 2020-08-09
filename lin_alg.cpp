@@ -11,6 +11,41 @@
 
 using namespace godot;
 
+/*
+Some design decisions
+=====================
+- Bypassing PoolRealArray::Read and PoolRealArray::Write
+  While incredibly useful for manipulating the raw pointers with
+  std:: functions, quite unreadable outside that use case, but
+  perhaps fastest. #include "donald-knuth-quote.inc".
+
+- Treating matrices as contiguous row-major PoolRealArrays.
+  Many vector functions can simply be reused for matrices this way.
+
+- Wrapping matrices in Dictionaries carrying both dimensions
+  instead of just n, where m = M.size() / n
+
+- Permitting custom key names on matrix-dictionaries for ease-of-use.
+  Internally, the value list is extracted where needed.
+
+- Adding a way to validate any dictionary that represents a matrix
+  and making validation an integral but optional part of every 
+  function that takes matrix-dictionaries as arguments.
+
+- Macros for repetitive definitions such as the element-wise operations.
+
+- Internal functions for
+	- matrix-dictionary validation
+	- wrapping PoolRealArray matrices in matrix-dictionaries
+	- initialising vectors
+	- initialising PoolRealArray matrices (just uses the vector version)
+	- in-place transpose
+	- stretching a vector to fit a larger vector
+	- stretching a matrix to fit a larger matrix
+	- matrix-matrix dot product (which works for matrix-vector)
+  these allow matrices to be operated on in either form. 
+*/
+
 void LinAlg::_register_methods() {
 	register_method("init_v", &LinAlg::init_v);
 	register_method("init_m", &LinAlg::init_m);
@@ -91,17 +126,21 @@ inline Dictionary _make_m() {
 	return ::_make_m(PoolRealArray(), 0, 0);
 }
 
+// The most useful thing I've devised, a macro to do what tuples do in C++17!
+#define expand_m(M)                                      \
+	const Array M##_values = (M).values();               \
+	PoolRealArray *_##M = &(PoolRealArray)M##_values[0]; \
+	int m_##M = M##_values[1];                           \
+	int n_##M = M##_values[2]
+
 constexpr real_t _REAL_SIGNALING_NAN = std::numeric_limits<real_t>::signaling_NaN();
 
 inline real_t &LinAlg::m_ij(const Dictionary &M, int i, int j, bool column_major = false, bool check = true) {
 	M_CHECK_V(M, const_cast<real_t &>(_REAL_SIGNALING_NAN));
 
-	const Array M_values = M.values();
-	PoolRealArray *_M = &((PoolRealArray)M_values[0]);
+	expand_m(M);
 	real_t *M_write_ptr = _M->write().ptr();
-	int m = (int)M_values[1];
-	int n = (int)M_values[2];
-	return column_major ? M_write_ptr[m * j + i] : M_write_ptr[n * i + j];
+	return column_major ? M_write_ptr[m_M * j + i] : M_write_ptr[n_M * i + j];
 }
 
 inline PoolRealArray _init_v(int n, real_t v0 = real_t(0)) {
@@ -170,12 +209,12 @@ Dictionary LinAlg::dyadic(const PoolRealArray &v) {
 
 	const real_t *v_read_ptr = v.read().ptr();
 	for (int i = 0; i < n; ++i) {
+		// can't use v[i] as v is passed as a const &
 		real_t vi = v_read_ptr[i];
 		PoolRealArray row(v);
 
 		real_t *row_write_ptr = row.write().ptr();
 		for (int j = 0; j < n; ++j) {
-			// can't use v[i] as that operator doesn't return a reference
 			row_write_ptr[j] *= vi;
 		}
 		ans_write_ptr[n * i] = row_write_ptr[i];
@@ -530,7 +569,11 @@ PoolRealArray _dot_mm(const PoolRealArray &M1, int m1, int n1, const PoolRealArr
 		}
 	}
 
+	return *ans;
+
 	/*
+	Rough work for the matrix-vector case.
+
 	m2 = v.size
 	n2 = 1 => j = 0
 
@@ -542,7 +585,7 @@ PoolRealArray _dot_mm(const PoolRealArray &M1, int m1, int n1, const PoolRealArr
 		ans_write_ptr[1 * i + 0] = sum;
 	}
 
-	== (k -> j)
+	== (k -> j) and if loop unrolls
 
 	for (int i = 0; i < m1; ++i) {
 		real_t sum = real_t();
@@ -552,15 +595,7 @@ PoolRealArray _dot_mm(const PoolRealArray &M1, int m1, int n1, const PoolRealArr
 		ans_write_ptr[i] = sum;
 	}
 	*/
-
-	return *ans;
 }
-
-#define expand_m(M)                                      \
-	const Array M##_values = (M).values();               \
-	PoolRealArray *_##M = &(PoolRealArray)M##_values[0]; \
-	int m_##M = M##_values[1];                           \
-	int n_##M = M##_values[2]
 
 PoolRealArray LinAlg::dot_mv(const Dictionary &M, const PoolRealArray &v, bool check = true) {
 	M_CHECK_V(M, PoolRealArray());
