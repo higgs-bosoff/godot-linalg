@@ -345,10 +345,11 @@ inline void _stretch_to_fit_v(PoolRealArray &to_stretch, const PoolRealArray &to
 
 // It is up to the user to avoid costly stretching by supplying a longer v1.
 // The implementation must promise that only the first argument is modified.
-// This is desirable if the user wants to make this vector larger.
+// This is desirable if the user wants to make this vector larger for further manipulation.
 #define ewise_vv_op_in_place(op, __)                                                    \
 	void LinAlg::ewise_vv_##op##_in_place(PoolRealArray &v1, const PoolRealArray &v2) { \
 		::_stretch_to_fit_v(v1, v2);                                                    \
+                                                                                        \
 		real_t *v1_write_ptr = v1.write().ptr();                                        \
 		const real_t *v2_read_ptr = v2.read().ptr();                                    \
 		/* ##op## all elements based on v2's length */                                  \
@@ -400,7 +401,9 @@ ewise_ms_op(add);
 ewise_ms_op(mul);
 
 /*
-stretch to fit 2d
+Stretch to fit: matrix edition!
+==============================
+
 row-major:
     row increases: insert cells at the end of each stride
     column increases: append new cells
@@ -412,6 +415,7 @@ column-major:
 problems:
 	append > insert
 	append_array > n * append
+	
 solutions:
 	-  { insert } -> append_array(init_v) -> append (O(n^2))
 		- many resizes
@@ -460,21 +464,16 @@ inline void _stretch_to_fit_m(PoolRealArray &to_stretch, int m1, int n1, const P
 
 // It is up to the user to avoid costly stretching by supplying a longer v1.
 // The implementation must promise that only the first argument is modified.
-// This is desirable if the user wants to make this vector larger.
+// This is desirable if the user wants to make this matrix larger for further manipulation.
 // This is even more significant due to the added complexity of resizing a matrix.
 #define ewise_mm_op_in_place(op, __)                                                                 \
 	void LinAlg::ewise_mm_##op##_in_place(Dictionary &M1, const Dictionary &M2, bool check = true) { \
 		M_CHECK(M1);                                                                                 \
 		M_CHECK(M2);                                                                                 \
                                                                                                      \
-		const Array M1_values = M1.values();                                                         \
-		const Array M2_values = M2.values();                                                         \
-		PoolRealArray *_M1 = &(PoolRealArray)M1_values[0];                                           \
-		PoolRealArray *_M2 = &(PoolRealArray)M2_values[0];                                           \
-                                                                                                     \
-		::_stretch_to_fit_m(                                                                         \
-				*_M1, M1_values[1], M1_values[2],                                                    \
-				*_M2, M2_values[1], M2_values[2]);                                                   \
+		expand_m(M1);                                                                                \
+		expand_m(M2);                                                                                \
+		::_stretch_to_fit_m(*_M1, m_M1, n_M1, *_M2, m_M2, n_M2);                                     \
                                                                                                      \
 		real_t *M1_write_ptr = _M1->write().ptr();                                                   \
 		const real_t *M2_read_ptr = _M2->read().ptr();                                               \
