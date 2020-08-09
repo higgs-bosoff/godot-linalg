@@ -20,6 +20,8 @@ using namespace godot;
 /// Matrices are represented as Dictionaries of PoolRealArray, real_t, real_t.
 ///
 /// This is *NOT* a replacement for proper BLAS libraries and routines.
+/// There is no sparse matrix implementation, and none of these work on parallel.
+/// Consider supporting the author in writing a wrapper for your favourite Linear Algebra library!
 struct LinAlg : public Reference {
 	GODOT_CLASS(LinAlg, Reference);
 
