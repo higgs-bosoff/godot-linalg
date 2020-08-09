@@ -304,6 +304,7 @@ static func norm2_v(v: Array)->float:
 	var ans = 0.0
 	
 	for i in range(len(v)):
+		# should use v[i] * v[i]
 		ans += pow(v[i], 2)
 	
 	return ans
