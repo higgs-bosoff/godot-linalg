@@ -436,6 +436,7 @@ inline void stretch_to_fit_m(PoolRealArray &to_stretch, int m1, int n1, const Po
 		}                                                                                            \
 	}
 
+// This consideration can be overlooked by making sure that the larger matrix becomes the first arg.
 #define compare_mm_and_ewise_mm_op(op)                                                                  \
 	Dictionary LinAlg::ewise_mm_##op##(const Dictionary &M1, const Dictionary &M2, bool check = true) { \
 		M_CHECK_V(M1, ::make_m());                                                                      \
@@ -453,7 +454,6 @@ inline void stretch_to_fit_m(PoolRealArray &to_stretch, int m1, int n1, const Po
 		return ans;                                                                                     \
 	}
 
-// This consideration can be overlooked by making sure that the larger matrix becomes the first arg.
 ewise_mm_op_in_place(add, +=);
 ewise_mm_op_in_place(mul, *=);
 
@@ -503,16 +503,14 @@ real_t LinAlg::dot_vv(const PoolRealArray &v1, const PoolRealArray &v2) {
 	return ans;
 }
 
-PoolRealArray LinAlg::dot_mm(const PoolRealArray &M1, int n1, const PoolRealArray &M2, int n2) {
-	int m2 = M2.size() / n2;
+PoolRealArray dot_mm(const PoolRealArray &M1, int m1, int n1, const PoolRealArray &M2, int m2, int n2) {
 	if (m2 != n1) {
-		ERR_PRINT("There should be as many columns in lhs as there are rows in rhs.");
+		ERR_PRINT("There should be as many columns in M1 as there are rows in M2.");
 		ERR_FAIL_V(PoolRealArray());
 	}
 
-	int m1 = M1.size() / n1;
 	// TODO check if this hack really avoids copy-on-write
-	PoolRealArray *ans = &init_m(m1, n2);
+	PoolRealArray *ans = &init_v(m1 * n2);
 	real_t *ans_write_ptr = ans->write().ptr();
 	const real_t *M1_read_ptr = M1.read().ptr();
 	const real_t *M2_read_ptr = M2.read().ptr();
@@ -527,8 +525,58 @@ PoolRealArray LinAlg::dot_mm(const PoolRealArray &M1, int n1, const PoolRealArra
 		}
 	}
 
+	/*
+	m2 = v.size
+	n2 = 1 => j = 0
+
+	for (int i = 0; i < m1; ++i) {
+		real_t sum = real_t();
+		for (int k = 0; k < v.size; ++k) {
+			sum += M1_read_ptr[n1 * i + k] * M2_read_ptr[1 * k + 0];
+		}
+		ans_write_ptr[1 * i + 0] = sum;
+	}
+
+	== (k -> j)
+
+	for (int i = 0; i < m1; ++i) {
+		real_t sum = real_t();
+		for (int j = 0; j < v.size; ++j) {
+			sum += M1_read_ptr[n1 * i + j] * M2_read_ptr[j];
+		}
+		ans_write_ptr[i] = sum;
+	}
+	*/
+
 	return *ans;
 }
 
-PoolRealArray LinAlg::dot_mv(const PoolRealArray &M, int n, const PoolRealArray &v) {
+PoolRealArray LinAlg::dot_mv(const Dictionary &M, const PoolRealArray &v, bool check = true) {
+	M_CHECK_V(M, PoolRealArray());
+
+	const Array M_values = M.values();
+	PoolRealArray *_M1 = &(PoolRealArray)M_values[0];
+	int m1 = M_values[1];
+	int n1 = M_values[2];
+
+	// A vector is a 1D matrix
+	PoolRealArray *ans = &::dot_mm(*_M1, m1, n1, v, v.size(), 1);
+	return *ans; // size is m1
+}
+
+Dictionary LinAlg::dot_mm(const Dictionary &M1, const Dictionary &M2, bool check = true) {
+	M_CHECK_V(M1, ::make_m());
+	M_CHECK_V(M2, ::make_m());
+
+	const Array M1_values = M1.values();
+	const Array M2_values = M2.values();
+	PoolRealArray *_M1 = &(PoolRealArray)M1_values[0];
+	PoolRealArray *_M2 = &(PoolRealArray)M2_values[0];
+	int m1 = M1_values[1];
+	int n1 = M1_values[2];
+	int m2 = M2_values[1];
+	int n2 = M2_values[2];
+
+	PoolRealArray *ans = &::dot_mm(*_M1, m1, n1, *_M2, m2, n2);
+	return ::make_m(*ans, m1, n2);
 }

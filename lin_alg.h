@@ -121,11 +121,11 @@ struct LinAlg : public Reference {
 	/// Dot product: vector times vector
 	static real_t dot_vv(const PoolRealArray &v1, const PoolRealArray &v2);
 
-	/// Dot product: matrix times matrix
-	static PoolRealArray dot_mm(const PoolRealArray &M1, int n1, const PoolRealArray &M2, int n2);
-
 	/// Dot product: matrix times vector
-	static PoolRealArray dot_mv(const PoolRealArray &M, int n, const PoolRealArray &v);
+	static PoolRealArray dot_mv(const Dictionary &M, const PoolRealArray &v, bool check = true);
+
+	/// Dot product: matrix times matrix
+	static Dictionary dot_mm(const Dictionary &M1, const Dictionary &M2, bool check = true);
 
 	/// QR decomposition
 	/// returns {Q: v, R: v}
