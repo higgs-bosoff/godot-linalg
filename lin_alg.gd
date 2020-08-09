@@ -369,7 +369,7 @@ static func dot_vv(v: Array, v2: Array)->float:
 
 
 # Utilities for QR: Extract minor
-static func _minor(M: Array, d: int, ans: Array)->void:
+static func _minor(M: Array, d: int, ans_m: Array)->void:
 	var n = len(M)
 	
 	for i in range(n):
