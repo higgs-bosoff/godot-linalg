@@ -133,9 +133,16 @@ struct LinAlg : public Reference {
 	/// returns {Q: m, R: m}
 	static Dictionary qr(const Dictionary &M, bool check = true);
 
-	/// Eigenvalues by power iteration for symmetric matrices
-	/// returns {evals: v, evecs: m}
-	static Dictionary eigs_powerit(const Dictionary &M, real_t tolerance = 1e-5, bool check = true);
+	/// Eigenvalues by power iteration for symmetric matrices, in-place
+	/// returns {evals: array of s, evecs: array of v}
+	static Dictionary eigs_powerit_in_place(const Dictionary &M, real_t tolerance = real_t(1e-5), bool check = true);
+
+	/// Eigenvalues by power iteration for symmetric matrices, in-place
+	/// returns {evals: array of s, evecs: array of v}
+	static Dictionary eigs_powerit(const Dictionary &M, real_t tolerance = real_t(1e-5), bool check = true);
+
+	/// Eigenvalues by QR decomposition
+	/// static Dictionary eigs_qr(const Dictionary &M, real_t tol = real_t(1e-8));
 };
 
 #endif

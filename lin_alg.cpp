@@ -80,6 +80,10 @@ void LinAlg::_register_methods() {
 	register_method("dot_vv", &LinAlg::dot_vv);
 	register_method("dot_mv", &LinAlg::dot_mv);
 	register_method("dot_mm", &LinAlg::dot_mm);
+	register_method("qr", &LinAlg::qr);
+	register_method("eigs_powerit_in_place", &LinAlg::eigs_powerit_in_place);
+	register_method("eigs_powerit", &LinAlg::eigs_powerit);
+	// register_method("eigs_qr", &LinAlg::eigs_qr);
 }
 
 const char *_not_m_msg = "This Dictionary isn't a matrix. Make sure that there are 3 values of type PoolRealArray, float, float.";
@@ -383,10 +387,10 @@ compare_vv_and_ewise_vv_op(mul);
 	Dictionary LinAlg::ewise_ms_##op(const Dictionary &M, real_t s, bool check = true) { \
 		M_CHECK_V(M, ::_make_m());                                                       \
                                                                                          \
-		const Array M_values = M.values();                                               \
-		PoolRealArray ans((PoolRealArray)M_values[0]);                                   \
+		expand_m(M);                                                                     \
+		PoolRealArray ans(*_M);                                                          \
 		ewise_vs_##op##_in_place(ans, s);                                                \
-		return ::_make_m(ans, M_values[1], M_values[2]);                                 \
+		return ::_make_m(ans, m_M, n_M);                                                 \
 	}
 
 ewise_ms_op_in_place(add);
@@ -493,8 +497,9 @@ inline void _stretch_to_fit_m(PoolRealArray &to_stretch, int m1, int n1, const P
 		const Dictionary *small = !M1_gt_M2 ? &M1 : &M2;                                                \
 		const Dictionary *large = M1_gt_M2 ? &M1 : &M2;                                                 \
                                                                                                         \
+		/* TODO check if this is a deep copy */                                                         \
 		Dictionary ans(*large);                                                                         \
-		ewise_mm_##op##_in_place(ans, *small);                                                          \
+		ewise_mm_##op##_in_place(ans, *small, check);                                                   \
 		return ans;                                                                                     \
 	}
 
@@ -695,4 +700,60 @@ Dictionary LinAlg::qr(const Dictionary &M, bool check = true) {
 
 		return Dictionary::make("Q", Q, "R", R);
 	}
+}
+
+Dictionary LinAlg::eigs_powerit_in_place(const Dictionary &M, real_t tol = real_t(1e-5), bool check = true) {
+	M_CHECK_V(M, Dictionary());
+
+	// Not ideal since m_M is unused
+	expand_m(M);
+	real_t *M_write_ptr = _M->write().ptr();
+
+	Array evals, evecs;
+
+	evecs.resize(n_M);
+	evals.resize(n_M);
+
+	for (int k = 0; k < n_M; ++k) {
+		// Start with a random vector
+		PoolRealArray v0 = rand_v(n_M);
+		real_t e0 = real_t(0);
+		real_t e1 = real_t();
+
+		for (int t = 0; t < 100; ++t) {
+			PoolRealArray *v1 = &dot_mv(M, v0);
+			e1 = norm_v(*v1);
+			ewise_vs_mul_in_place(*v1, real_t(1) / e1);
+
+			if (std::fabsf(e1 - e0) < tol) {
+				// Sign fix
+				e1 *= dot_vv(v0, *v1);
+				break;
+			}
+			e0 = e1;
+			v0 = *v1;
+		}
+
+		evals[k] = e1;
+		evecs[k] = v0;
+
+		// Shift
+		for (int i = 0; i < n_M; ++i) {
+			// Can be used this way since it's not a const &
+			real_t vi = v0[i];
+			for (int j = 0; j < n_M; ++j) {
+				M_write_ptr[n_M * i + j] -= e1 * vi * v0[j];
+			}
+		}
+	}
+
+	return Dictionary::make("evals", evals, "evecs", evecs);
+}
+
+Dictionary LinAlg::eigs_powerit(const Dictionary &M, real_t tol = real_t(1e-5), bool check = true) {
+	M_CHECK_V(M, Dictionary());
+
+	expand_m(M);
+	Dictionary ans = ::_make_m(PoolRealArray(*_M), m_M, n_M);
+	return eigs_powerit(ans, tol, check);
 }

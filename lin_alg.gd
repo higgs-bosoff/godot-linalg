@@ -438,7 +438,6 @@ static func qr(M: Array)->Array:
 # Eigenvalues by power iteration for symmetric matrices
 static func eigs_powerit(M: Array, tol: float=1e-5, in_place: bool=false)->Array:
 	var n = len(M)
-	# TODO serves no purpose
 	if not in_place:
 		M = M.duplicate(true)
 	
