@@ -2,8 +2,11 @@
 
 #include <cmath>
 #include <cstring>
+#include <limits>
 #include <utility>
+#include <vector>
 
+#include <Array.hpp>
 #include <RandomNumberGenerator.hpp>
 
 using namespace godot;
@@ -43,6 +46,52 @@ void LinAlg::_register_methods() {
 	register_method("dot_mm", &LinAlg::dot_mm);
 }
 
+const char *not_m_msg = "This Dictionary isn't a matrix. Make sure that there are 3 values of type PoolRealArray, float, float.";
+
+#define M_CHECK(M)             \
+	if (check && !is_m((M))) { \
+		ERR_PRINT(not_m_msg);  \
+		ERR_FAIL();            \
+	}
+
+#define M_CHECK_V(M, ret)      \
+	if (check && !is_m((M))) { \
+		ERR_PRINT(not_m_msg);  \
+		ERR_FAIL_V((ret));     \
+	}
+
+inline bool is_m(const Dictionary &M) {
+	if (M.size() != 3) {
+		return false;
+	}
+	const Array M_values = M.values();
+	bool type_0_ok = M_values[0].get_type() == Variant::POOL_REAL_ARRAY;
+	bool type_1_ok = M_values[1].get_type() == Variant::REAL;
+	bool type_2_ok = M_values[2].get_type() == Variant::REAL;
+	bool indexes_ok = (0 < (int)M_values[1]) && (0 < (int)M_values[2]);
+	return type_0_ok && type_1_ok && type_2_ok && indexes_ok;
+}
+
+inline Dictionary make_m(const PoolRealArray &M, int m, int n) {
+	return Dictionary::make("M", M, "m", m, "n", n);
+}
+
+inline Dictionary make_m() {
+	return ::make_m(PoolRealArray(), 0, 0);
+}
+
+constexpr real_t real_nan = std::numeric_limits<real_t>::signaling_NaN();
+
+inline real_t &LinAlg::m_ij(const Dictionary &M, int i, int j, bool check = true, bool column_major = false) {
+	M_CHECK_V(M, const_cast<real_t &>(real_nan));
+	const Array M_values = M.values();
+	PoolRealArray *_M = &((PoolRealArray)M_values[0]);
+	real_t *M_write_ptr = _M->write().ptr();
+	int m = (int)M_values[1];
+	int n = (int)M_values[2];
+	return column_major ? M_write_ptr[m * j + i] : M_write_ptr[n * i + j];
+}
+
 inline PoolRealArray init_v(int n, real_t v0 = real_t(0)) {
 	PoolRealArray ans;
 	ans.resize(n);
@@ -59,11 +108,11 @@ PoolRealArray LinAlg::init_v(int n, real_t v0 = real_t()) {
 	return ::init_v(n, v0);
 }
 
-PoolRealArray LinAlg::init_m(int m, int n, real_t m0 = real_t()) {
-	return ::init_v(m * n, m0);
+Dictionary LinAlg::init_m(int m, int n, real_t m0 = real_t()) {
+	return ::make_m(::init_v(m * n), m, n);
 }
 
-PoolRealArray LinAlg::eye(const int n) {
+Dictionary LinAlg::eye(const int n) {
 	PoolRealArray ans;
 	ans.resize(n * n);
 	real_t *ans_write_ptr = ans.write().ptr();
@@ -76,10 +125,10 @@ PoolRealArray LinAlg::eye(const int n) {
 		}
 	}
 
-	return ans;
+	return ::make_m(ans, n, n);
 }
 
-PoolRealArray LinAlg::diag(const PoolRealArray &v) {
+Dictionary LinAlg::diag(const PoolRealArray &v) {
 	int n = v.size();
 	PoolRealArray ans;
 	ans.resize(n * n);
@@ -94,10 +143,10 @@ PoolRealArray LinAlg::diag(const PoolRealArray &v) {
 		}
 	}
 
-	return ans;
+	return ::make_m(ans, n, n);
 }
 
-PoolRealArray LinAlg::dyadic(const PoolRealArray &v) {
+Dictionary LinAlg::dyadic(const PoolRealArray &v) {
 	int n = v.size();
 	PoolRealArray ans;
 	ans.resize(n * n);
@@ -116,30 +165,57 @@ PoolRealArray LinAlg::dyadic(const PoolRealArray &v) {
 		ans_write_ptr[n * i] = row_write_ptr[i];
 	}
 
-	return ans;
+	return ::make_m(ans, n, n);
 }
 
-inline void transpose_in_place(PoolRealArray &M, int n) {
+// Implementation for transforming non-square matrices from
+// https://www.geeksforgeeks.org/inplace-m-x-n-size-matrix-transpose/
+inline void transpose_in_place(PoolRealArray &M, int m, int n) {
+	/*
+		m   = 2   = 3
+		n   = 3   = 2
+		[1 2 3] [1 4] [1 2 3;4 5 6] [1 4;2 5;3 6]
+		[4 5 6] [2 5]
+				[3 6]
+	*/
 	real_t *M_write_ptr = M.write().ptr();
+	int size = m * n - 1;
+	// Use a vector<bool> instead of a bitset
+	std::vector<bool> marked(m * n);
 
-	for (int i = 0; i < n - 1; ++i) {
-		for (int j = i + 1; j < n; ++j) {
-			std::swap(M_write_ptr[n * j + i], M_write_ptr[n * i + j]);
-		}
+	marked[0] = marked[size] = true;
+
+	int i = 1;
+	while (i < size) {
+		int cycle_start = i;
+		real_t t = M_write_ptr[i];
+		do {
+			int next = (i * m) % size;
+			std::swap(M_write_ptr[next], t);
+			marked[i] = true;
+			i = next;
+		} while (i != cycle_start);
+
+		for (i = 1; i < size && marked[i]; i++)
+			;
 	}
 }
 
-void LinAlg::transpose_in_place(PoolRealArray &M, int n) {
-	::transpose_in_place(M, n);
+void LinAlg::transpose_in_place(Dictionary &M, bool check = true) {
+	M_CHECK(M);
+	const Array M_values = M.values();
+	::transpose_in_place((PoolRealArray)M_values[0], M_values[1], M_values[2]);
 }
 
-PoolRealArray LinAlg::transpose(const PoolRealArray &M, int n) {
-	PoolRealArray ans(M);
-	::transpose_in_place(ans, n);
-	return ans;
+Dictionary LinAlg::transpose(const Dictionary &M, bool check = true) {
+	M_CHECK_V(M, Dictionary());
+	const Array M_values = M.values();
+	PoolRealArray ans((PoolRealArray)M_values[0]);
+	::transpose_in_place(ans, M_values[1], M_values[2]);
+	return make_m(ans, M_values[1], M_values[2]);
 }
 
-PoolRealArray LinAlg::householder(const PoolRealArray &v) {
+Dictionary LinAlg::householder(const PoolRealArray &v) {
 	int n = v.size();
 	PoolRealArray ans;
 	ans.resize(n * n);
@@ -158,7 +234,7 @@ PoolRealArray LinAlg::householder(const PoolRealArray &v) {
 		ans_write_ptr[n * i] = row_write_ptr[i];
 	}
 
-	return ans;
+	return make_m(ans, n, n);
 }
 
 PoolRealArray LinAlg::rand_v(int n, real_t s = real_t(1)) {
@@ -174,8 +250,8 @@ PoolRealArray LinAlg::rand_v(int n, real_t s = real_t(1)) {
 	return ans;
 }
 
-PoolRealArray LinAlg::rand_m(int m, int n, real_t s = real_t(1)) {
-	return rand_v(m * n, s);
+Dictionary LinAlg::rand_m(int m, int n, real_t s = real_t(1)) {
+	return ::make_m(rand_v(m * n, s), m, n);
 }
 
 void LinAlg::ewise_vs_add_in_place(PoolRealArray &v, real_t s) {
@@ -275,24 +351,31 @@ PoolRealArray LinAlg::ewise_vv_mul(const PoolRealArray &v1, const PoolRealArray 
 
 // internals are alike, just reuse the functions
 
-void LinAlg::ewise_ms_add_in_place(PoolRealArray &M, real_t s) {
-	ewise_vs_add_in_place(M, s);
+void LinAlg::ewise_ms_add_in_place(Dictionary &M, real_t s, bool check = true) {
+	M_CHECK(M);
+	ewise_vs_add_in_place((PoolRealArray)M.values()[0], s);
 }
 
-PoolRealArray LinAlg::ewise_ms_add(const PoolRealArray &M, real_t s) {
-	PoolRealArray ans(M);
-	ewise_ms_add_in_place(ans, s);
-	return ans;
+Dictionary LinAlg::ewise_ms_add(const Dictionary &M, real_t s, bool check = true) {
+	M_CHECK(M, ::make_m());
+	const Array M_values = M.values();
+	PoolRealArray ans((PoolRealArray)M_values[0]);
+	ewise_vs_add_in_place(ans, s);
+	return ::make_m(ans, M_values[1], M_values[2]);
 }
 
-void LinAlg::ewise_ms_mul_in_place(PoolRealArray &M, real_t s) {
-	ewise_vs_mul_in_place(M, s);
+void LinAlg::ewise_ms_mul_in_place(Dictionary &M, real_t s, bool check = true) {
+	M_CHECK(M);
+	ewise_vs_mul_in_place((PoolRealArray)M.values()[0], s);
 }
 
-PoolRealArray LinAlg::ewise_ms_mul(const PoolRealArray &M, real_t s) {
-	PoolRealArray ans(M);
-	ewise_ms_mul_in_place(ans, s);
-	return ans;
+Dictionary LinAlg::ewise_ms_mul(const Dictionary &M, real_t s, bool check = true) {
+	M_CHECK_V(M, ::make_m());
+
+	const Array M_values = M.values();
+	PoolRealArray ans((PoolRealArray)M_values[0]);
+	ewise_vs_mul_in_place(ans, s);
+	return ::make_m(ans, M_values[1], M_values[2]);
 }
 
 /*
@@ -329,11 +412,7 @@ solutions:
 
 */
 
-inline void stretch_to_fit_m(PoolRealArray &to_stretch, int n1, const PoolRealArray &to_fit, int n2) {
-	// Num columns
-	int m1 = to_stretch.size() / n1;
-	int m2 = to_fit.size() / n2;
-
+inline void stretch_to_fit_m(PoolRealArray &to_stretch, int m1, int n1, const PoolRealArray &to_fit, int m2, int n2) {
 	if (m1 > m2 || n1 > n2) {
 		return;
 	}
@@ -349,19 +428,28 @@ inline void stretch_to_fit_m(PoolRealArray &to_stretch, int n1, const PoolRealAr
 	// stretch columns
 	if (m1 < m2) {
 		// [1 2 3;4 5 6] -> [1 4;2 5;3 6]
-		transpose_in_place(to_stretch, n2);
+		::transpose_in_place(to_stretch, n2);
 		// [1 4;2 5;3 6] -> [1 4;2 5;3 6;0 0]
 		// to_stretch.resize(to_fit.size());
 		to_stretch.append_array(init_v(n2 * (m2 - m1)));
 		// [1 4;2 5;3 6;0 0] -> [1 2 3 0;4 5 6 0]
-		transpose_in_place(to_stretch, m2);
+		::transpose_in_place(to_stretch, m2);
 	}
 }
 
-void LinAlg::ewise_mm_add_in_place(PoolRealArray &M1, int n1, const PoolRealArray &M2, int n2) {
-	::stretch_to_fit_m(M1, n1, M2, n2);
-	real_t *M1_write_ptr = M1.write().ptr();
-	const real_t *M2_read_ptr = M2.read().ptr();
+void LinAlg::ewise_mm_add_in_place(Dictionary &M1, const Dictionary &M2, bool check = true) {
+	M_CHECK(M1);
+	M_CHECK(M2);
+
+	const Array M1_values = M1.values();
+	const Array M2_values = M2.values();
+	PoolRealArray *_M1 = &(PoolRealArray)M1_values[0];
+	PoolRealArray *_M2 = &(PoolRealArray)M2_values[0];
+	::stretch_to_fit_m(
+			*_M1, M1_values[1], M1_values[2],
+			*_M2, M2_values[1], M2_values[2]);
+	real_t *M1_write_ptr = _M1->write().ptr();
+	const real_t *M2_read_ptr = _M2->read().ptr();
 
 	// add all elements based on M2's length
 	for (int i = 0; i < M2.size(); ++i) {
@@ -369,17 +457,29 @@ void LinAlg::ewise_mm_add_in_place(PoolRealArray &M1, int n1, const PoolRealArra
 	}
 }
 
-PoolRealArray LinAlg::ewise_mm_add(const PoolRealArray &M1, int n1, const PoolRealArray &M2, int n2) {
+Dictionary LinAlg::ewise_mm_add(const Dictionary &M1, const Dictionary &M2, bool check = true) {
+	M_CHECK(M1);
+	M_CHECK(M2);
+
+	const Array M1_values = M1.values();
+	const Array M2_values = M2.values();
+	PoolRealArray *_M1 = &(PoolRealArray)M1_values[0];
+	PoolRealArray *_M2 = &(PoolRealArray)M2_values[0];
+	int m1 = M1_values[1];
+	int m2 = M2_values[1];
+	int n1 = M1_values[2];
+	int n2 = M2_values[2];
+
 	bool n1_gt_n2 = n1 > n2;
 	int small_n = !n1_gt_n2 ? n1 : n2;
 	int large_n = n1_gt_n2 ? n1 : n2;
 
-	bool M1_gt_M2 = M1.size() > M2.size();
-	const PoolRealArray *small = !M1_gt_M2 ? &M1 : &M2;
-	const PoolRealArray *large = M1_gt_M2 ? &M1 : &M2;
+	bool M1_gt_M2 = _M1->size() > _M2->size();
+	const Dictionary *small = !M1_gt_M2 ? &M1 : &M2;
+	const Dictionary *large = M1_gt_M2 ? &M1 : &M2;
 
-	PoolRealArray ans(*large);
-	ewise_mm_add_in_place(ans, large_n, *small, small_n);
+	Dictionary ans(*large);
+	ewise_mm_add_in_place(ans, *small);
 	return ans;
 }
 
@@ -455,7 +555,7 @@ PoolRealArray LinAlg::dot_mm(const PoolRealArray &M1, int n1, const PoolRealArra
 	int m2 = M2.size() / n2;
 	if (m2 != n1) {
 		ERR_PRINT("There should be as many columns in lhs as there are rows in rhs.");
-		return PoolRealArray();
+		ERR_FAIL_V(PoolRealArray());
 	}
 
 	int m1 = M1.size() / n1;
@@ -476,4 +576,7 @@ PoolRealArray LinAlg::dot_mm(const PoolRealArray &M1, int n1, const PoolRealArra
 	}
 
 	return *ans;
+}
+
+PoolRealArray LinAlg::dot_mv(const PoolRealArray &M, int n, const PoolRealArray &v) {
 }
