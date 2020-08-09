@@ -556,16 +556,18 @@ PoolRealArray _dot_mm(const PoolRealArray &M1, int m1, int n1, const PoolRealArr
 	return *ans;
 }
 
+#define expand_m(M)                                      \
+	const Array M##_values = (M).values();               \
+	PoolRealArray *_##M = &(PoolRealArray)M##_values[0]; \
+	int m_##M = M##_values[1];                           \
+	int n_##M = M##_values[2]
+
 PoolRealArray LinAlg::dot_mv(const Dictionary &M, const PoolRealArray &v, bool check = true) {
 	M_CHECK_V(M, PoolRealArray());
 
-	const Array M_values = M.values();
-	PoolRealArray *_M1 = &(PoolRealArray)M_values[0];
-	int m1 = M_values[1];
-	int n1 = M_values[2];
-
+	expand_m(M);
 	// A vector is a 1D matrix
-	PoolRealArray *ans = &::_dot_mm(*_M1, m1, n1, v, v.size(), 1);
+	PoolRealArray *ans = &::_dot_mm(*_M, m_M, n_M, v, v.size(), 1);
 	return *ans; // size is m1
 }
 
@@ -573,18 +575,89 @@ Dictionary LinAlg::dot_mm(const Dictionary &M1, const Dictionary &M2, bool check
 	M_CHECK_V(M1, ::_make_m());
 	M_CHECK_V(M2, ::_make_m());
 
-	const Array M1_values = M1.values();
-	const Array M2_values = M2.values();
-	PoolRealArray *_M1 = &(PoolRealArray)M1_values[0];
-	PoolRealArray *_M2 = &(PoolRealArray)M2_values[0];
-	int m1 = M1_values[1];
-	int n1 = M1_values[2];
-	int m2 = M2_values[1];
-	int n2 = M2_values[2];
+	expand_m(M1);
+	expand_m(M2);
+	PoolRealArray *ans = &::_dot_mm(*_M1, m_M1, n_M1, *_M2, m_M2, n_M2);
+	return ::_make_m(*ans, m_M1, n_M2);
+}
 
-	PoolRealArray *ans = &::_dot_mm(*_M1, m1, n1, *_M2, m2, n2);
-	return ::_make_m(*ans, m1, n2);
+void _minor(const PoolRealArray &M, int m, int n, int d, PoolRealArray &out_ans, int m_ans, int n_ans) {
+	const real_t *M_read_ptr = M.read().ptr();
+	real_t *out_ans_write_ptr = out_ans.write().ptr();
+
+	for (int i = 0; i < n; ++i) {
+		for (int j = 0; j < n; ++j) {
+			real_t x = real_t(i == j);
+
+			bool i_or_j_lt_d = (i < d) || (j < d);
+			x = (i_or_j_lt_d * x) + (!i_or_j_lt_d * M_read_ptr[n * i + j]);
+
+			out_ans_write_ptr[n_ans * i + j] = x;
+		}
+	}
+}
+
+void _copy_column(const PoolRealArray &M, int m, int n, PoolRealArray &out_v, int j) {
+	const real_t *M_read_ptr = M.read().ptr();
+	real_t *out_v_write_ptr = out_v.write().ptr();
+
+	for (int i = 0; i < m; ++i) {
+		out_v_write_ptr[i] = M_read_ptr[n * i + j];
+	}
 }
 
 Dictionary LinAlg::qr(const Dictionary &M, bool check = true) {
+	M_CHECK_V(M, Dictionary());
+
+	// The beauty of this technique is that you can interchange between
+	// internal and wrapped matrix functions as required
+	expand_m(M);
+	const real_t *M_read_ptr = _M->read().ptr();
+	int k_max = n_M < (m_M - 1) ? n_M : (m_M - 1);
+
+	PoolRealArray *e = &init_v(m_M);
+	real_t *e_write_ptr = e->write().ptr();
+	PoolRealArray *x = &init_v(m_M);
+	const real_t *x_read_ptr = x->read().ptr();
+	// M used in PoolRealArray form
+	PoolRealArray Z(*_M);
+	PoolRealArray *Z1 = &_init_m(m_M, n_M);
+
+	// Array of matrices
+	Array vq;
+	vq.resize(k_max);
+
+	for (int k = 0; k < k_max; ++k) {
+		_minor(Z, m_M, n_M, k, *Z1, m_M, n_M);
+		_copy_column(*Z1, m_M, n_M, *x, k);
+
+		real_t a = norm_v(*x);
+		bool diag_gt_0 = M_read_ptr[k * (n_M + 1)]; // M[n * k + k]
+		a = (diag_gt_0 * -a) + (!diag_gt_0 * a);
+
+		for (int i = 0; i < m_M; ++i) {
+			e_write_ptr[i] = x_read_ptr[i];
+			e_write_ptr[i] += real_t((i == k) * a);
+		}
+
+		normalize_in_place(*e);
+		vq[k] = householder(*e);
+		Dictionary vq_k = ((Dictionary)vq[k]);
+		// Z1 is in its PoolRealArray form, so use the internal _dot_mm call
+		expand_m(vq_k);
+		Z = _dot_mm(*_vq_k, m_vq_k, n_vq_k, *Z1, m_M, n_M);
+
+		// Courtesy Variant::operator Dictionary()
+		Dictionary Q = vq[0];
+		for (int i = 1; i < k_max; ++i) {
+			// Since I got a dictionary, why not just use Dictionaries?
+			Q = dot_mm(vq[i], Q);
+		}
+
+		// M used in Dictionary form
+		Dictionary R = dot_mm(Q, M);
+		transpose_in_place(Q);
+
+		return Dictionary::make("Q", Q, "R", R);
+	}
 }

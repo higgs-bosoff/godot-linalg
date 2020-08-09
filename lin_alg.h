@@ -128,7 +128,7 @@ struct LinAlg : public Reference {
 	static Dictionary dot_mm(const Dictionary &M1, const Dictionary &M2, bool check = true);
 
 	/// QR decomposition
-	/// returns {Q: v, R: v}
+	/// returns {Q: m, R: m}
 	static Dictionary qr(const Dictionary &M, bool check = true);
 
 	/// Eigenvalues by power iteration for symmetric matrices
