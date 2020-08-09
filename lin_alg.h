@@ -24,7 +24,7 @@ struct LinAlg : public Reference {
 	static void _register_methods();
 
 	/// Read/write a matrix element
-	static real_t &m_ij(const Dictionary &M, int i, int j, bool check = true, bool column_major = false);
+	static real_t &m_ij(const Dictionary &M, int i, int j, bool column_major = false, bool check = true);
 
 	/// Inititalise a vector
 	static PoolRealArray init_v(int n, real_t v0 = real_t(0));
@@ -129,11 +129,11 @@ struct LinAlg : public Reference {
 
 	/// QR decomposition
 	/// returns {Q: v, R: v}
-	static Dictionary qr(const PoolRealArray &M, int n);
+	static Dictionary qr(const Dictionary &M, bool check = true);
 
 	/// Eigenvalues by power iteration for symmetric matrices
 	/// returns {evals: v, evecs: m}
-	static Dictionary eigs_powerit(const PoolRealArray &M, int n, real_t tolerance = 1e-5);
+	static Dictionary eigs_powerit(const Dictionary &M, real_t tolerance = 1e-5, bool check = true);
 };
 
 #endif
