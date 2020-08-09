@@ -62,6 +62,8 @@ struct LinAlg : public Reference {
 	/// Random matrix
 	static Dictionary rand_m(int m, int n, real_t s = real_t(1));
 
+	/// TODO negation operator, boolean operators
+
 	/// Element-wise: vector plus scalar in-place
 	static void ewise_vs_add_in_place(PoolRealArray &v, real_t s);
 
