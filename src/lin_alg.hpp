@@ -33,6 +33,8 @@ class LinAlg : public Node {
 public:
 	static void _register_methods();
 
+	void _init() {}
+
 	/// Read/write a matrix element
 	real_t &m_ij(const Dictionary M, int i, int j, bool column_major = false, bool check = true);
 
