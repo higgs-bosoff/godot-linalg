@@ -28,11 +28,14 @@ Some design decisions
 - Permitting custom key names on matrix-dictionaries for ease-of-use.
   Internally, the value list is extracted where needed.
 
+- Not treating zero-dimensional vectors and matrices as scalars.
+
 - Adding a way to validate any dictionary that represents a matrix
   and making validation an integral but optional part of every 
   function that takes matrix-dictionaries as arguments.
 
-- Macros for repetitive definitions such as the element-wise operations.
+- Macros for repetitive definitions such as the element-wise operations
+  and read/write to PoolRealArray
 
 - Internal functions for
 	- matrix-dictionary validation
@@ -139,21 +142,47 @@ inline Dictionary _make_m() {
 
 constexpr real_t _REAL_SIGNALING_NAN = std::numeric_limits<real_t>::signaling_NaN();
 
+// Redefine these as PoolRealArray::Read/::Write calls if needed
+
+#define make_rw(pool_real_array) \
+	real_t *pool_real_array##_write_ptr = (pool_real_array).write().ptr()
+
+#define make_r(pool_real_array) \
+	const real_t *pool_real_array##_read_ptr = (pool_real_array).read().ptr()
+
+#define makep_rw(pool_real_array) \
+	real_t *pool_real_array##_write_ptr = (pool_real_array)->write().ptr()
+
+#define makep_r(pool_real_array) \
+	const real_t *pool_real_array##_read_ptr = (pool_real_array)->read().ptr()
+
+#define get_rw(pool_real_array) \
+	pool_real_array##_write_ptr
+
+#define get_r(pool_real_array) \
+	pool_real_array##_read_ptr
+
+#define rw_at(pool_real_array, idx) \
+	pool_real_array##_write_ptr[(idx)]
+
+#define r_at(pool_real_array, idx) \
+	pool_real_array##_read_ptr[(idx)]
+
 inline real_t &LinAlg::m_ij(const Dictionary &M, int i, int j, bool column_major = false, bool check = true) {
 	M_CHECK_V(M, const_cast<real_t &>(_REAL_SIGNALING_NAN));
 
 	expand_m(M);
-	real_t *M_write_ptr = _M->write().ptr();
-	return column_major ? M_write_ptr[m_M * j + i] : M_write_ptr[n_M * i + j];
+	makep_rw(_M);
+	return column_major ? rw_at(_M, m_M * j + i) : rw_at(_M, n_M * i + j);
 }
 
 inline PoolRealArray _init_v(int n, real_t v0 = real_t(0)) {
 	PoolRealArray ans;
 	ans.resize(n);
-	real_t *ans_write_ptr = ans.write().ptr();
-	std::memset(ans_write_ptr, v0, (n * sizeof(real_t)));
+	make_rw(ans);
+	std::memset(get_rw(ans), v0, (n * sizeof(real_t)));
 	// for (int i = 0; i < n; ++i) {
-	//     ans_write_ptr[i] = v0;
+	//     rw_at(ans, i) = v0;
 	// }
 
 	return ans;
@@ -171,26 +200,6 @@ Dictionary LinAlg::init_m(int m, int n, real_t m0 = real_t()) {
 	return ::_make_m(::_init_m(m, n, m0), m, n);
 }
 
-// Redefine these as PoolRealArray::Read/::Write calls if needed
-
-#define make_rw(pool_real_array) \
-	real_t *pool_real_array##_write_ptr = (pool_real_array).write().ptr()
-
-#define make_r(pool_real_array) \
-	const real_t *pool_real_array##_read_ptr = (pool_real_array).read().ptr()
-
-#define makep_rw(pool_real_array) \
-	real_t *pool_real_array##_write_ptr = (pool_real_array)->write().ptr()
-
-#define makep_r(pool_real_array) \
-	const real_t *pool_real_array##_read_ptr = (pool_real_array)->read().ptr()
-
-#define rw_at(pool_real_array, idx) \
-	pool_real_array##_write_ptr[(idx)]
-
-#define r_at(pool_real_array, idx) \
-	pool_real_array##_read_ptr[(idx)]
-
 Dictionary LinAlg::eye(int n) {
 	PoolRealArray ans;
 	ans.resize(n * n);
@@ -203,6 +212,11 @@ Dictionary LinAlg::eye(int n) {
 			rw_at(ans, n * i + j) = real_t(i == j);
 		}
 	}
+
+	// [1 0; 0 1] = eye(2)
+	// [1 0 0;0 1 0;0 0 1] = eye(3)
+	// [1 0 0 0;0 1 0 0;0 0 1 0;0 0 0 1] = eye(4)
+	// Could be implemented as a single-loop
 
 	return ::_make_m(ans, n, n);
 }
