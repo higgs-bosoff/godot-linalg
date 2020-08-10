@@ -3,8 +3,8 @@
 
 #include <Dictionary.hpp>
 #include <Godot.hpp>
+#include <Node.hpp>
 #include <PoolArrays.hpp>
-#include <Reference.hpp>
 
 using namespace godot;
 
@@ -22,132 +22,132 @@ using namespace godot;
 /// This is *NOT* a replacement for proper BLAS libraries and routines. Do not use this in production code.
 /// There is no sparse matrix implementation, and none of these work on parallel.
 /// Consider supporting the author in writing a wrapper for your favourite Linear Algebra library!
-struct LinAlg : public Reference {
-	GODOT_CLASS(LinAlg, Reference);
+class LinAlg : public Node {
+	GODOT_CLASS(LinAlg, Node);
 
 public:
 	static void _register_methods();
 
 	/// Read/write a matrix element
-	static real_t &m_ij(const Dictionary &M, int i, int j, bool column_major = false, bool check = true);
+	real_t &m_ij(const Dictionary M, int i, int j, bool column_major = false, bool check = true);
 
 	/// Inititalise a vector
-	static PoolRealArray init_v(int n, real_t v0 = real_t(0));
+	PoolRealArray init_v(int n, real_t v0 = real_t(0));
 
 	/// Initialise a matrix
-	static Dictionary init_m(int m, int n, real_t m0 = real_t(0));
+	Dictionary init_m(int m, int n, real_t m0 = real_t(0));
 
 	/// Identity matrix
-	static Dictionary eye(int n);
+	Dictionary eye(int n);
 
 	/// Diagonal matrix
 	/// TODO consider making this sparse
-	static Dictionary diag(const PoolRealArray &v);
+	Dictionary diag(const PoolRealArray v);
 
 	/// Dyadic matrix
-	static Dictionary dyadic(const PoolRealArray &v);
+	Dictionary dyadic(const PoolRealArray v);
 
 	/// Transpose in-place, needs matrix row size
-	static void transpose_in_place(Dictionary &M, bool check = true);
+	void transpose_in_place(Dictionary M, bool check = true);
 
 	/// Transpose, needs matrix row size
-	static Dictionary transpose(const Dictionary &M, bool check = true);
+	Dictionary transpose(const Dictionary M, bool check = true);
 
 	/// Householder matrix from vector
 	/// (https://en.wikipedia.org/wiki/Householder_transformation)
-	static Dictionary householder(const PoolRealArray &v);
+	Dictionary householder(const PoolRealArray v);
 
 	/// Random vector
-	static PoolRealArray rand_v(int n, real_t s = real_t(1));
+	PoolRealArray rand_v(int n, real_t s = real_t(1));
 
 	/// Random matrix
-	static Dictionary rand_m(int m, int n, real_t s = real_t(1));
+	Dictionary rand_m(int m, int n, real_t s = real_t(1));
 
 	/// TODO negation operator, boolean operators
 
 	/// Element-wise: vector plus scalar in-place
-	static void ewise_vs_add_in_place(PoolRealArray &v, real_t s);
+	void ewise_vs_add_in_place(PoolRealArray v, real_t s);
 
 	/// Element-wise: vector plus scalar
-	static PoolRealArray ewise_vs_add(const PoolRealArray &v, real_t s);
+	PoolRealArray ewise_vs_add(const PoolRealArray v, real_t s);
 
 	/// Element-wise: vector times scalar in-place
-	static void ewise_vs_mul_in_place(PoolRealArray &v, real_t s);
+	void ewise_vs_mul_in_place(PoolRealArray v, real_t s);
 
 	/// Element-wise: vector times scalar
-	static PoolRealArray ewise_vs_mul(const PoolRealArray &v, real_t s);
+	PoolRealArray ewise_vs_mul(const PoolRealArray v, real_t s);
 
 	/// Element-wise: vector plus vector in-place
-	static void ewise_vv_add_in_place(PoolRealArray &v1, const PoolRealArray &v2);
+	void ewise_vv_add_in_place(PoolRealArray v1, const PoolRealArray v2);
 
 	/// Element-wise: vector plus vector
-	static PoolRealArray ewise_vv_add(const PoolRealArray &v1, const PoolRealArray &v2);
+	PoolRealArray ewise_vv_add(const PoolRealArray v1, const PoolRealArray v2);
 
 	/// Element-wise: vector times vector in-place
-	static void ewise_vv_mul_in_place(PoolRealArray &v1, const PoolRealArray &v2);
+	void ewise_vv_mul_in_place(PoolRealArray v1, const PoolRealArray v2);
 
 	/// Element-wise: vector times vector
-	static PoolRealArray ewise_vv_mul(const PoolRealArray &v1, const PoolRealArray &v2);
+	PoolRealArray ewise_vv_mul(const PoolRealArray v1, const PoolRealArray v2);
 
 	/// Element-wise: matrix plus scalar in-place
-	static void ewise_ms_add_in_place(Dictionary &M, real_t s, bool check = true);
+	void ewise_ms_add_in_place(Dictionary M, real_t s, bool check = true);
 
 	/// Element-wise: matrix plus scalar
-	static Dictionary ewise_ms_add(const Dictionary &M, real_t s, bool check = true);
+	Dictionary ewise_ms_add(const Dictionary M, real_t s, bool check = true);
 
 	/// Element-wise: matrix times scalar in-place
-	static void ewise_ms_mul_in_place(Dictionary &M, real_t s, bool check = true);
+	void ewise_ms_mul_in_place(Dictionary M, real_t s, bool check = true);
 
 	/// Element-wise: matrix times scalar
-	static Dictionary ewise_ms_mul(const Dictionary &M, real_t s, bool check = true);
+	Dictionary ewise_ms_mul(const Dictionary M, real_t s, bool check = true);
 
 	/// Element-wise: matrix plus matrix in-place
-	static void ewise_mm_add_in_place(Dictionary &M1, const Dictionary &M2, bool check = true);
+	void ewise_mm_add_in_place(Dictionary M1, const Dictionary M2, bool check = true);
 
 	/// Element-wise: matrix plus matrix
-	static Dictionary ewise_mm_add(const Dictionary &M1, const Dictionary &M2, bool check = true);
+	Dictionary ewise_mm_add(const Dictionary M1, const Dictionary M2, bool check = true);
 
 	/// Element-wise: matrix times matrix in-place
-	static void ewise_mm_mul_in_place(Dictionary &M1, const Dictionary &M2, bool check = true);
+	void ewise_mm_mul_in_place(Dictionary M1, const Dictionary M2, bool check = true);
 
 	/// Element-wise: matrix times matrix
-	static Dictionary ewise_mm_mul(const Dictionary &M1, const Dictionary &M2, bool check = true);
+	Dictionary ewise_mm_mul(const Dictionary M1, const Dictionary M2, bool check = true);
 
 	/// Norm^2 of vector
-	static real_t norm2_v(const PoolRealArray &v);
+	real_t norm2_v(const PoolRealArray v);
 
 	/// Norm of vector
-	static real_t norm_v(const PoolRealArray &v);
+	real_t norm_v(const PoolRealArray v);
 
 	/// Normalise in-place
-	static void normalize_in_place(PoolRealArray &v);
+	void normalize_in_place(PoolRealArray v);
 
 	/// Normalise
-	static PoolRealArray normalize(const PoolRealArray &v);
+	PoolRealArray normalize(const PoolRealArray v);
 
 	/// Dot product: vector times vector
-	static real_t dot_vv(const PoolRealArray &v1, const PoolRealArray &v2);
+	real_t dot_vv(const PoolRealArray v1, const PoolRealArray v2);
 
 	/// Dot product: matrix times vector
-	static PoolRealArray dot_mv(const Dictionary &M, const PoolRealArray &v, bool check = true);
+	PoolRealArray dot_mv(const Dictionary M, const PoolRealArray v, bool check = true);
 
 	/// Dot product: matrix times matrix
-	static Dictionary dot_mm(const Dictionary &M1, const Dictionary &M2, bool check = true);
+	Dictionary dot_mm(const Dictionary M1, const Dictionary M2, bool check = true);
 
 	/// QR decomposition
 	/// returns {Q: m, R: m}
-	static Dictionary qr(const Dictionary &M, bool check = true);
+	Dictionary qr(const Dictionary M, bool check = true);
 
 	/// Eigenvalues by power iteration for symmetric matrices, in-place
 	/// returns {evals: array of s, evecs: array of v}
-	static Dictionary eigs_powerit_in_place(const Dictionary &M, real_t tolerance = real_t(1e-5f), bool check = true);
+	Dictionary eigs_powerit_in_place(const Dictionary M, real_t tolerance = real_t(1e-5f), bool check = true);
 
 	/// Eigenvalues by power iteration for symmetric matrices, in-place
 	/// returns {evals: array of s, evecs: array of v}
-	static Dictionary eigs_powerit(const Dictionary &M, real_t tolerance = real_t(1e-5f), bool check = true);
+	Dictionary eigs_powerit(const Dictionary M, real_t tolerance = real_t(1e-5f), bool check = true);
 
 	/// Eigenvalues by QR decomposition
-	/// static Dictionary eigs_qr(const Dictionary &M, real_t tol = real_t(1e-8f));
+	/// Dictionary eigs_qr(const Dictionary M, real_t tol = real_t(1e-8f));
 };
 
 #endif // LIN_ALG_HPP
