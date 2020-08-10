@@ -374,7 +374,7 @@ static func _minor(M: Array, d: int, ans_m: Array)->void:
 
 	for i in range(n):
 		var row = M[i]
-		var rowout = ans[i]
+		var rowout = ans_m[i]
 		rowout.resize(n)
 		for j in range(n):
 			var x = 1 if i == j else 0
