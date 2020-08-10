@@ -1,8 +1,8 @@
 # godot-linalg
 ### Linear Algebra library in GDScript for Godot Engine.
 
-*For documentation about the GDNative plugin, check README_GDNATIVE.md.* \
-*For information on how to build the GDNative plugin, check HOW_TO_BUILD.md.*
+*For documentation about the GDNative plugin, check [`README_GDNATIVE.md`](README_GDNATIVE.md).* \
+*For information on how to build the GDNative plugin, check [`HOW_TO_BUILD.md`](HOW_TO_BUILD.md).*
 
 All methods are optimised for maximum speed. They take arrays and assume the right dimension for them. If the inputs aren't right they'll crash. Third input
 is used for the answer, preallocated.

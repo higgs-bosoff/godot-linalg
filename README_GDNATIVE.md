@@ -1,7 +1,7 @@
 # godot-linalg GDNative Plugin
 ### Naive implementation in C++ using `godot-cpp`.
 
-*For information on how to build the GDNative plugin, check HOW_TO_BUILD.md.*
+*For information on how to build the GDNative plugin, check [`HOW_TO_BUILD.md`](HOW_TO_BUILD.md).*
 
 All methods exchange `PoolRealArrays` or `Dictionaries` and operate on `real_t` (synonymous with `float` in most cases). \
 Conditional branches are avoided where possible.

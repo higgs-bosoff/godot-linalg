@@ -1,13 +1,14 @@
 # How to Build the godot-linalg GDNative plugin
-Builds fine with mingw-gcc.
 
-*For documentation about the GDNative plugin, check README_GDNATIVE.md.*
+Builds fine with mingw-gcc, which is the preferred method. MSVC or clang-LLVM may also be used.
 
-## Windows:
+*For documentation about the GDNative plugin, check [`README_GDNATIVE.md`](README_GDNATIVE.md).*
+
+### Windows
   - Get [Scoop](https://scoop.sh/).
   - `scoop install gcc`
 
-## Any:
+### Any
     Replace values in <> with the required values.
   - Compile `godot-cpp`: `cd godot-cpp; scons platform=<PLATFORM> generate_bindings=yes -j<NUMBER_OF_THREADS_TO_USE> bits=64 use_mingw=yes; cd ..`
   - Compile `liblinalg`: `scons platform=<PLATFORM> -j<NUMBER_OF_THREADS_TO_USE> bits=64 use_mingw=yes`
