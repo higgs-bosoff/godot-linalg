@@ -171,16 +171,36 @@ Dictionary LinAlg::init_m(int m, int n, real_t m0 = real_t()) {
 	return ::_make_m(::_init_m(m, n, m0), m, n);
 }
 
+// Redefine these as PoolRealArray::Read/::Write calls if needed
+
+#define make_rw(pool_real_array) \
+	real_t *pool_real_array##_write_ptr = (pool_real_array).write().ptr()
+
+#define make_r(pool_real_array) \
+	const real_t *pool_real_array##_read_ptr = (pool_real_array).read().ptr()
+
+#define makep_rw(pool_real_array) \
+	real_t *pool_real_array##_write_ptr = (pool_real_array)->write().ptr()
+
+#define makep_r(pool_real_array) \
+	const real_t *pool_real_array##_read_ptr = (pool_real_array)->read().ptr()
+
+#define rw_at(pool_real_array, idx) \
+	pool_real_array##_write_ptr[(idx)]
+
+#define r_at(pool_real_array, idx) \
+	pool_real_array##_read_ptr[(idx)]
+
 Dictionary LinAlg::eye(int n) {
 	PoolRealArray ans;
 	ans.resize(n * n);
-	real_t *ans_write_ptr = ans.write().ptr();
 
+	make_rw(ans);
 	// Use row-major notation for accessing index
 	for (int i = 0; i < n; ++i) {
 		for (int j = 0; j < n; ++j) {
 			// look ma, no branches
-			ans_write_ptr[n * i + j] = real_t(i == j);
+			rw_at(ans, n * i + j) = real_t(i == j);
 		}
 	}
 
@@ -191,14 +211,14 @@ Dictionary LinAlg::diag(const PoolRealArray &v) {
 	int n = v.size();
 	PoolRealArray ans;
 	ans.resize(n * n);
-	real_t *ans_write_ptr = ans.write().ptr();
+	make_rw(ans);
+	make_r(v);
 
-	const real_t *v_read_ptr = v.read().ptr();
 	for (int i = 0; i < n; ++i) {
 		// can't use v[i] as that operator expects a const int
-		real_t vi = v_read_ptr[i];
+		real_t vi = r_at(v, i);
 		for (int j = 0; j < n; ++j) {
-			ans_write_ptr[n * i + j] = real_t((i == j) * vi);
+			rw_at(ans, n * i + j) = real_t((i == j) * vi);
 		}
 	}
 
@@ -209,19 +229,19 @@ Dictionary LinAlg::dyadic(const PoolRealArray &v) {
 	int n = v.size();
 	PoolRealArray ans;
 	ans.resize(n * n);
-	real_t *ans_write_ptr = ans.write().ptr();
+	make_rw(ans);
+	make_r(v);
 
-	const real_t *v_read_ptr = v.read().ptr();
 	for (int i = 0; i < n; ++i) {
 		// can't use v[i] as v is passed as a const &
-		real_t vi = v_read_ptr[i];
+		real_t vi = r_at(v, i);
 		PoolRealArray row(v);
+		make_rw(row);
 
-		real_t *row_write_ptr = row.write().ptr();
 		for (int j = 0; j < n; ++j) {
-			row_write_ptr[j] *= vi;
+			rw_at(row, j) *= vi;
 		}
-		ans_write_ptr[n * i] = row_write_ptr[i];
+		rw_at(ans, n * i) = rw_at(row, i);
 	}
 
 	return ::_make_m(ans, n, n);
@@ -237,7 +257,7 @@ inline void transpose_in_place(PoolRealArray &M, int m, int n) {
 		[4 5 6] [2 5]
 				[3 6]
 	*/
-	real_t *M_write_ptr = M.write().ptr();
+	make_rw(M);
 	int size = m * n - 1;
 	// Use a vector<bool> instead of a bitset
 	std::vector<bool> marked(m * n);
@@ -247,10 +267,10 @@ inline void transpose_in_place(PoolRealArray &M, int m, int n) {
 	int i = 1;
 	while (i < size) {
 		int cycle_start = i;
-		real_t t = M_write_ptr[i];
+		real_t t = rw_at(M, i);
 		do {
 			int next = (i * m) % size;
-			std::swap(M_write_ptr[next], t);
+			std::swap(rw_at(M, next), t);
 			marked[i] = true;
 			i = next;
 		} while (i != cycle_start);
@@ -263,36 +283,36 @@ inline void transpose_in_place(PoolRealArray &M, int m, int n) {
 void LinAlg::transpose_in_place(Dictionary &M, bool check = true) {
 	M_CHECK(M);
 
-	const Array M_values = M.values();
-	::transpose_in_place((PoolRealArray)M_values[0], M_values[1], M_values[2]);
+	expand_m(M);
+	::transpose_in_place(*_M, m_M, n_M);
 }
 
 Dictionary LinAlg::transpose(const Dictionary &M, bool check = true) {
 	M_CHECK_V(M, Dictionary());
 
-	const Array M_values = M.values();
-	PoolRealArray ans((PoolRealArray)M_values[0]);
-	::transpose_in_place(ans, M_values[1], M_values[2]);
-	return _make_m(ans, M_values[1], M_values[2]);
+	expand_m(M);
+	PoolRealArray ans(*_M);
+	::transpose_in_place(ans, m_M, n_M);
+	return _make_m(ans, m_M, n_M);
 }
 
 Dictionary LinAlg::householder(const PoolRealArray &v) {
 	int n = v.size();
 	PoolRealArray ans;
 	ans.resize(n * n);
-	real_t *ans_write_ptr = ans.write().ptr();
+	make_rw(ans);
 
-	const real_t *v_read_ptr = v.read().ptr();
+	make_r(v);
 	for (int i = 0; i < n; ++i) {
-		real_t vi = -v_read_ptr[i] * 2;
+		real_t vi = -r_at(v, i) * 2;
 		PoolRealArray row(v);
+		make_rw(row);
 
-		real_t *row_write_ptr = row.write().ptr();
 		for (int j = 0; j < n; ++j) {
-			row_write_ptr[j] *= vi;
-			row_write_ptr[j] += real_t(i == j);
+			rw_at(row, j) *= vi;
+			rw_at(row, j) += real_t(i == j);
 		}
-		ans_write_ptr[n * i] = row_write_ptr[i];
+		rw_at(ans, n * i) = rw_at(row, i);
 	}
 
 	return ::_make_m(ans, n, n);
@@ -301,11 +321,11 @@ Dictionary LinAlg::householder(const PoolRealArray &v) {
 PoolRealArray LinAlg::rand_v(int n, real_t s = real_t(1)) {
 	PoolRealArray ans;
 	ans.resize(n);
-	real_t *ans_write_ptr = ans.write().ptr();
+	make_rw(ans);
 
 	Ref<RandomNumberGenerator> rand = RandomNumberGenerator::_new();
 	for (int i = 0; i < n; ++i) {
-		ans_write_ptr[i] = std::fmod(rand->randf(), s);
+		rw_at(ans, i) = std::fmod(rand->randf(), s);
 	}
 
 	return ans;
@@ -317,10 +337,9 @@ Dictionary LinAlg::rand_m(int m, int n, real_t s = real_t(1)) {
 
 #define ewise_vs_op_in_place(op, __)                                    \
 	void LinAlg::ewise_vs_##op##_in_place(PoolRealArray &v, real_t s) { \
-		real_t *v_write_ptr = v.write().ptr();                          \
-                                                                        \
+		make_rw(v);                                                     \
 		for (int i = 0; i < v.size(); ++i) {                            \
-			v_write_ptr[i] __ s;                                        \
+			rw_at(v, i) __ s;                                           \
 		}                                                               \
 	}
 
@@ -350,11 +369,11 @@ inline void _stretch_to_fit_v(PoolRealArray &to_stretch, const PoolRealArray &to
 	void LinAlg::ewise_vv_##op##_in_place(PoolRealArray &v1, const PoolRealArray &v2) { \
 		::_stretch_to_fit_v(v1, v2);                                                    \
                                                                                         \
-		real_t *v1_write_ptr = v1.write().ptr();                                        \
-		const real_t *v2_read_ptr = v2.read().ptr();                                    \
+		make_rw(v1);                                                                    \
+		make_r(v2);                                                                     \
 		/* ##op## all elements based on v2's length */                                  \
 		for (int i = 0; i < v2.size(); ++i) {                                           \
-			v1_write_ptr[i] __ v2_read_ptr[i];                                          \
+			rw_at(v1, i) __ r_at(v2, i);                                                \
 		}                                                                               \
 	}
 
@@ -475,11 +494,11 @@ inline void _stretch_to_fit_m(PoolRealArray &to_stretch, int m1, int n1, const P
 		expand_m(M2);                                                                                \
 		::_stretch_to_fit_m(*_M1, m_M1, n_M1, *_M2, m_M2, n_M2);                                     \
                                                                                                      \
-		real_t *M1_write_ptr = _M1->write().ptr();                                                   \
-		const real_t *M2_read_ptr = _M2->read().ptr();                                               \
+		makep_rw(_M1);                                                                               \
+		makep_r(_M2);                                                                                \
 		/* ##op## all elements based on M2's length */                                               \
 		for (int i = 0; i < _M2->size(); ++i) {                                                      \
-			M1_write_ptr[i] __ M2_read_ptr[i];                                                       \
+			rw_at(_M1, i) __ r_at(_M2, i);                                                           \
 		}                                                                                            \
 	}
 
@@ -511,9 +530,9 @@ compare_mm_and_ewise_mm_op(mul);
 real_t LinAlg::norm2_v(const PoolRealArray &v) {
 	real_t ans = real_t(0);
 
-	const real_t *v_read_ptr = v.read().ptr();
+	make_r(v);
 	for (int i = 0; i < v.size(); ++i) {
-		real_t vi = v_read_ptr[i];
+		real_t vi = r_at(v, i);
 		ans += vi * vi;
 	}
 
@@ -542,10 +561,10 @@ real_t LinAlg::dot_vv(const PoolRealArray &v1, const PoolRealArray &v2) {
 
 	real_t ans = real_t();
 
-	const real_t *v1_read_ptr = v1.read().ptr();
-	const real_t *v2_read_ptr = v2.read().ptr();
+	make_r(v1);
+	make_r(v2);
 	for (int i = 0; i < v1.size(); ++i) {
-		ans += v1_read_ptr[i] * v2_read_ptr[i];
+		ans += r_at(v1, i) * r_at(v2, i);
 	}
 
 	return ans;
@@ -559,17 +578,17 @@ PoolRealArray _dot_mm(const PoolRealArray &M1, int m1, int n1, const PoolRealArr
 
 	// TODO check if this hack really avoids copy-on-write
 	PoolRealArray *ans = &_init_v(m1 * n2);
-	real_t *ans_write_ptr = ans->write().ptr();
-	const real_t *M1_read_ptr = M1.read().ptr();
-	const real_t *M2_read_ptr = M2.read().ptr();
+	makep_rw(ans);
+	make_r(M1);
+	make_r(M2);
 
 	for (int i = 0; i < m1; ++i) {
 		for (int j = 0; j < n2; ++j) {
 			real_t sum = real_t();
 			for (int k = 0; k < m2; ++k) {
-				sum += M1_read_ptr[n1 * i + k] * M2_read_ptr[n2 * k + j];
+				sum += r_at(M1, n1 * i + k) * r_at(M2, n2 * k + j);
 			}
-			ans_write_ptr[n2 * i + j] = sum;
+			rw_at(ans, n2 * i + j) = sum;
 		}
 	}
 
@@ -621,27 +640,27 @@ Dictionary LinAlg::dot_mm(const Dictionary &M1, const Dictionary &M2, bool check
 }
 
 void _minor(const PoolRealArray &M, int m, int n, int d, PoolRealArray &out_ans, int m_ans, int n_ans) {
-	const real_t *M_read_ptr = M.read().ptr();
-	real_t *out_ans_write_ptr = out_ans.write().ptr();
+	make_r(M);
+	make_rw(out_ans);
 
 	for (int i = 0; i < n; ++i) {
 		for (int j = 0; j < n; ++j) {
 			real_t x = real_t(i == j);
 
 			bool i_or_j_lt_d = (i < d) || (j < d);
-			x = (i_or_j_lt_d * x) + (!i_or_j_lt_d * M_read_ptr[n * i + j]);
+			x = (i_or_j_lt_d * x) + (!i_or_j_lt_d * r_at(M, n * i + j));
 
-			out_ans_write_ptr[n_ans * i + j] = x;
+			rw_at(out_ans, n_ans * i + j) = x;
 		}
 	}
 }
 
 void _copy_column(const PoolRealArray &M, int m, int n, PoolRealArray &out_v, int j) {
-	const real_t *M_read_ptr = M.read().ptr();
-	real_t *out_v_write_ptr = out_v.write().ptr();
+	make_r(M);
+	make_rw(out_v);
 
 	for (int i = 0; i < m; ++i) {
-		out_v_write_ptr[i] = M_read_ptr[n * i + j];
+		rw_at(out_v, i) = r_at(M, n * i + j);
 	}
 }
 
@@ -651,13 +670,13 @@ Dictionary LinAlg::qr(const Dictionary &M, bool check = true) {
 	// The beauty of this technique is that you can interchange between
 	// internal and wrapped matrix functions as required
 	expand_m(M);
-	const real_t *M_read_ptr = _M->read().ptr();
+	makep_r(_M);
 	int k_max = n_M < (m_M - 1) ? n_M : (m_M - 1);
 
 	PoolRealArray *e = &init_v(m_M);
-	real_t *e_write_ptr = e->write().ptr();
+	makep_rw(e);
 	PoolRealArray *x = &init_v(m_M);
-	const real_t *x_read_ptr = x->read().ptr();
+	makep_r(x);
 	// M used in PoolRealArray form
 	PoolRealArray Z(*_M);
 	PoolRealArray *Z1 = &_init_m(m_M, n_M);
@@ -671,12 +690,12 @@ Dictionary LinAlg::qr(const Dictionary &M, bool check = true) {
 		_copy_column(*Z1, m_M, n_M, *x, k);
 
 		real_t a = norm_v(*x);
-		bool diag_gt_0 = M_read_ptr[k * (n_M + 1)]; // M[n * k + k]
+		bool diag_gt_0 = r_at(_M, k * (n_M + 1)); // M[n * k + k]
 		a = (diag_gt_0 * -a) + (!diag_gt_0 * a);
 
 		for (int i = 0; i < m_M; ++i) {
-			e_write_ptr[i] = x_read_ptr[i];
-			e_write_ptr[i] += real_t((i == k) * a);
+			rw_at(e, i) = r_at(x, i);
+			rw_at(e, i) += real_t((i == k) * a);
 		}
 
 		normalize_in_place(*e);
@@ -706,7 +725,7 @@ Dictionary LinAlg::eigs_powerit_in_place(const Dictionary &M, real_t tol = real_
 
 	// Not ideal since m_M is unused
 	expand_m(M);
-	real_t *M_write_ptr = _M->write().ptr();
+	makep_rw(_M);
 
 	Array evals, evecs;
 
@@ -741,7 +760,7 @@ Dictionary LinAlg::eigs_powerit_in_place(const Dictionary &M, real_t tol = real_
 			// Can be used this way since it's not a const &
 			real_t vi = v0[i];
 			for (int j = 0; j < n_M; ++j) {
-				M_write_ptr[n_M * i + j] -= e1 * vi * v0[j];
+				rw_at(_M, n_M * i + j) -= e1 * vi * v0[j];
 			}
 		}
 	}
