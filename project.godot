@@ -10,14 +10,22 @@ config_version=4
 
 _global_script_classes=[ {
 "base": "Reference",
-"class": "LinAlg",
+"class": "LinAlgGD",
 "language": "GDScript",
 "path": "res://lin_alg.gd"
 } ]
 _global_script_class_icons={
-"LinAlg": ""
+"LinAlgGD": ""
 }
 
 [application]
 
 config/name="LinearAlgebra"
+
+[autoload]
+
+LinAlg="*res://bin/lin_alg.gdns"
+
+[gdnative]
+
+singletons=[ "res://bin/lin_alg.gdnlib" ]
