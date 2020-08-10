@@ -1,20 +1,23 @@
 # godot-linalg
-Linear Algebra library in GDScript for Godot Engine
+### Linear Algebra library in GDScript for Godot Engine.
 
-All methods are optimised for maximum speed. They take arrays and assume the 
-right dimension for them. If the inputs aren't right they'll crash. Third input
-is used for the answer, preallocated. There are no conditional branchings. 
-Just use the method appropriate to the situation. The names are coded to reflect that. s = scalar, v = vector and m = matrix. So for example
+*For documentation about the GDNative plugin, check [`README_GDNATIVE.md`](README_GDNATIVE.md).* \
+*For information on how to build the GDNative plugin, check [`HOW_TO_BUILD.md`](HOW_TO_BUILD.md).*
 
-    dot_vm(v, M)
+All methods are optimised for maximum speed. They take arrays and assume the right dimension for them. If the inputs aren't right they'll crash. Third input
+is used for the answer, preallocated.
 
-is a dot product between vector and matrix (in that order). Wherever the `in_place` argument is provided, it is possible to perform the operation on the object itself instead of instantiating a new one (this too optimises performance). So for example
+Just use the method appropriate to the situation. The names are coded to reflect that: s = scalar, v = vector and m = matrix. So for example
+
+    dot_mv(M, v)
+
+is a dot product between a matrix and a vector (in that order). Wherever the `in_place` argument is provided, it is possible to perform the operation on the object itself instead of instantiating a new one (this too optimises performance). So for example
     
     transpose(M, true)
 
 will turn M into its own transpose by reference, whereas
 
-     MT = transpose(M)
+    MT = transpose(M)
 
 will leave M unaltered.
 
