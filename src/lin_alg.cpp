@@ -388,11 +388,11 @@ inline void _stretch_to_fit_v(PoolRealArray &to_stretch, const PoolRealArray &to
 #define compare_vv_and_ewise_vv_op(op)                                                    \
 	PoolRealArray LinAlg::ewise_vv_##op(const PoolRealArray v1, const PoolRealArray v2) { \
 		bool v1_gt_v2 = v1.size() > v2.size();                                            \
-		const PoolRealArray *small = !v1_gt_v2 ? &v1 : &v2;                               \
-		const PoolRealArray *large = v1_gt_v2 ? &v1 : &v2;                                \
+		const PoolRealArray &small = !v1_gt_v2 ? v1 : v2;                                 \
+		const PoolRealArray &large = v1_gt_v2 ? v1 : v2;                                  \
                                                                                           \
-		PoolRealArray ans(*large);                                                        \
-		ewise_vv_##op##_in_place(ans, *small);                                            \
+		PoolRealArray ans(large);                                                         \
+		ewise_vv_##op##_in_place(ans, small);                                             \
 		return ans;                                                                       \
 	}
 
