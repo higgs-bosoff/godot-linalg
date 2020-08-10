@@ -48,7 +48,6 @@ func _on_ButtonTestMatrix_pressed():
 	$TestMatrix/EtestPowIt.text = ""
 	for i in range(len(M)):
 		var e1 = eig_pi[1][i]
-		$TestMatrix/EtestPowIt.text += str(LinAlgGD.dot_vv(e1,
-														 LinAlgGD.dot_mv(M, e1)))
+		$TestMatrix/EtestPowIt.text += str(LinAlgGD.dot_vv(e1, LinAlgGD.dot_mv(M, e1)))
 		$TestMatrix/EtestPowIt.text += ", "
 
