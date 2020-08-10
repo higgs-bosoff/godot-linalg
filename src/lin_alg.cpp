@@ -44,7 +44,7 @@ Some design decisions
 	- in-place transpose
 	- stretching a vector to fit a larger vector
 	- stretching a matrix to fit a larger matrix
-	- matrix-matrix dot product (which works for matrix-vector)
+	- matrix-matrix dot product (which works for the matrix-vector case)
   these allow matrices to be operated on in either form. 
 */
 

@@ -1,5 +1,7 @@
-# How to Build LinAlg GDNative plugin
+# How to Build the godot-linalg GDNative plugin
 Builds fine with mingw-gcc.
+
+*For documentation about the GDNative plugin, check README_GDNATIVE.md.*
 
 ## Windows:
   - Get [Scoop](https://scoop.sh/).
