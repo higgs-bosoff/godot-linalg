@@ -21,11 +21,12 @@ _global_script_class_icons={
 [application]
 
 config/name="LinearAlgebra"
+run/main_scene="res://TestScene.tscn"
 
 [autoload]
 
-LinAlg="*res://bin/lin_alg.gdns"
+LinAlg="*res://src/lin_alg.gdns"
 
 [gdnative]
 
-singletons=[ "res://bin/lin_alg.gdnlib" ]
+singletons=[  ]

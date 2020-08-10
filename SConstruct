@@ -62,7 +62,7 @@ opts.Add(EnumVariable('platform', "Compilation platform", host_platform, ['', 'w
 opts.Add(EnumVariable('p', "Compilation target, alias for 'platform'", '', ['', 'windows', 'x11', 'linux', 'osx']))
 opts.Add(BoolVariable('use_llvm', "Use the LLVM / Clang compiler", 'no'))
 opts.Add(PathVariable('target_path', 'The path where the lib is installed.', 'bin/'))
-opts.Add(PathVariable('target_name', 'The library name.', 'liblinalg', PathVariable.PathAccept))
+opts.Add(PathVariable('target_name', 'The library name.', 'lin_alg', PathVariable.PathAccept))
 
 opts.Add(BoolVariable(
     'use_mingw',
