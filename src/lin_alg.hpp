@@ -1,5 +1,5 @@
-#ifndef LIN_ALG_H
-#define LIN_ALG_H
+#ifndef LIN_ALG_HPP
+#define LIN_ALG_HPP
 
 #include <Dictionary.hpp>
 #include <Godot.hpp>
@@ -25,6 +25,7 @@ using namespace godot;
 struct LinAlg : public Reference {
 	GODOT_CLASS(LinAlg, Reference);
 
+public:
 	static void _register_methods();
 
 	/// Read/write a matrix element
@@ -139,14 +140,14 @@ struct LinAlg : public Reference {
 
 	/// Eigenvalues by power iteration for symmetric matrices, in-place
 	/// returns {evals: array of s, evecs: array of v}
-	static Dictionary eigs_powerit_in_place(const Dictionary &M, real_t tolerance = real_t(1e-5), bool check = true);
+	static Dictionary eigs_powerit_in_place(const Dictionary &M, real_t tolerance = real_t(1e-5f), bool check = true);
 
 	/// Eigenvalues by power iteration for symmetric matrices, in-place
 	/// returns {evals: array of s, evecs: array of v}
-	static Dictionary eigs_powerit(const Dictionary &M, real_t tolerance = real_t(1e-5), bool check = true);
+	static Dictionary eigs_powerit(const Dictionary &M, real_t tolerance = real_t(1e-5f), bool check = true);
 
 	/// Eigenvalues by QR decomposition
-	/// static Dictionary eigs_qr(const Dictionary &M, real_t tol = real_t(1e-8));
+	/// static Dictionary eigs_qr(const Dictionary &M, real_t tol = real_t(1e-8f));
 };
 
-#endif
+#endif // LIN_ALG_HPP
